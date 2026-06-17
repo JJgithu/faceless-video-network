@@ -101,7 +101,7 @@ def download_video_clips(keywords: list[str], run_dir: Path) -> list[Path]:
         candidates.extend(results)
 
     # Fallback: use generic visually-appealing queries
-    if len(candidates) < config.PEXELS_VIDEO_CLIPS:
+    if len(candidates) < config.PEXELS_CLIPS_TARGET:
         for fallback in ["viral news", "trending world", "technology future"]:
             candidates.extend(_search_pexels_videos(fallback, per_page=5))
 
@@ -116,7 +116,7 @@ def download_video_clips(keywords: list[str], run_dir: Path) -> list[Path]:
 
     downloaded: list[Path] = []
     for i, video in enumerate(unique):
-        if len(downloaded) >= config.PEXELS_VIDEO_CLIPS:
+        if len(downloaded) >= config.PEXELS_CLIPS_TARGET:
             break
         url = _best_video_file(video)
         if not url:
