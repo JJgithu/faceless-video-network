@@ -5,16 +5,16 @@ import re
 import time
 from typing import Any
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from config import GEMINI_API_KEY, GEMINI_MODEL
 from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# Configure the SDK once at import time
-genai.configure(api_key=GEMINI_API_KEY)
-_model = genai.GenerativeModel(GEMINI_MODEL)
+# Configure client once at import time
+_client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 def ask(prompt: str, retries: int = 3, delay: float = 5.0) -> str:
@@ -25,7 +25,10 @@ def ask(prompt: str, retries: int = 3, delay: float = 5.0) -> str:
     for attempt in range(1, retries + 1):
         try:
             log.debug(f"Gemini request (attempt {attempt}): {prompt[:120]}…")
-            response = _model.generate_content(prompt)
+            response = _client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+            )
             text = response.text.strip()
             log.debug(f"Gemini response: {text[:200]}…")
             return text

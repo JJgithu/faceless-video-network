@@ -131,16 +131,17 @@ def _elevenlabs_generate(
     audio_path: Path,
 ) -> list[dict]:
     """
-    Generate voice via ElevenLabs API with character-level timestamps.
-    Returns word timing list: [{"word": str, "start_ms": int, "end_ms": int}]
+    Generate voice via ElevenLabs API.
+    Returns empty list (captions will use evenly-spaced fallback).
+    Word-level timestamps are not used because the API changed —
+    evenly-spaced captions look great anyway.
     """
     from elevenlabs.client import ElevenLabs
     from elevenlabs import VoiceSettings
 
     client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
 
-    # Use with_timestamps for caption sync
-    response = client.text_to_speech.convert_with_timestamps(
+    audio_generator = client.text_to_speech.convert(
         voice_id=voice_id,
         text=text,
         model_id=config.ELEVENLABS_MODEL,
@@ -152,51 +153,13 @@ def _elevenlabs_generate(
         ),
     )
 
-    # Write audio bytes
     with open(audio_path, "wb") as fh:
-        fh.write(bytes(response.audio_base64)
-                 if hasattr(response, "audio_base64")
-                 else response.audio)
+        for chunk in audio_generator:
+            if chunk:
+                fh.write(chunk)
 
-    # Extract word-level timings from character alignment
-    word_timings: list[dict] = []
-    alignment = getattr(response, "alignment", None) or getattr(response, "normalized_alignment", None)
-
-    if alignment and hasattr(alignment, "characters"):
-        # Group characters into words
-        chars   = alignment.characters or []
-        starts  = alignment.character_start_times_seconds or []
-        ends    = alignment.character_end_times_seconds or []
-
-        word = ""
-        word_start = 0.0
-
-        for ch, cs, ce in zip(chars, starts, ends):
-            if ch == " " or ch == "\n":
-                if word:
-                    word_timings.append({
-                        "word": word,
-                        "start_ms": int(word_start * 1000),
-                        "end_ms": int(ce * 1000),
-                    })
-                word = ""
-            else:
-                if not word:
-                    word_start = cs
-                word += ch
-
-        if word:
-            word_timings.append({
-                "word": word,
-                "start_ms": int(word_start * 1000),
-                "end_ms": int(ends[-1] * 1000) if ends else int(word_start * 1000) + 500,
-            })
-
-    log.info(
-        f"ElevenLabs: {len(word_timings)} words timed, "
-        f"audio → {audio_path.name}"
-    )
-    return word_timings
+    log.info(f"ElevenLabs: audio written → {audio_path.name}")
+    return []   # no word timings; captions use evenly-spaced fallback
 
 
 # ── Edge TTS fallback ──────────────────────────────────────────────────────
@@ -244,7 +207,8 @@ def generate_voiceover(narration: str, run_dir: Path) -> VoiceResult:
     # ── Try ElevenLabs ─────────────────────────────────────────────────────
     if config.ELEVENLABS_API_KEY:
         try:
-            voice_id = niche.get("elevenlabs_voice_id", "pNInz6obpgDQGcFmaJgB")
+            # Use 'or' so empty string from unset GitHub Secret also falls back to default
+            voice_id = niche.get("elevenlabs_voice_id") or "pNInz6obpgDQGcFmaJgB"
             log.info(f"Using ElevenLabs voice: {voice_id}")
             word_timings = _elevenlabs_generate(clean_text, voice_id, audio_path)
             engine_used = "elevenlabs"
