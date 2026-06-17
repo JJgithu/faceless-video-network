@@ -1,47 +1,47 @@
 name: 🎬 Faceless Video Pipeline
 
 on:
-  # Run twice per day — 9am ET (1pm UTC) and 9pm ET (1am UTC next day)
+  # Two batches per day — each batch posts 2 videos (different niches)
+  # Batch 1: 9am ET  → Historical Mysteries + Stoic Philosophy
+  # Batch 2: 9pm ET  → Ocean Mysteries + Mind Benders
   schedule:
-    - cron: '0 13 * * *'   # 9am ET  — morning video
-    - cron: '0 1  * * *'   # 9pm ET  — evening video
+    - cron: '0 13 * * *'   # 9am ET  — Batch 1
+    - cron: '0 1  * * *'   # 9pm ET  — Batch 2
 
-  # Allow manual triggers (great for testing or forced runs)
+  # Manual trigger — pick one niche or run the full batch
   workflow_dispatch:
     inputs:
       niche:
-        description: 'Which niche channel to run'
+        description: 'Specific niche (leave as "auto_batch" to run both niches for this time of day)'
         required: false
-        default: 'historical_mysteries'
+        default: 'auto_batch'
         type: choice
         options:
+          - auto_batch
           - historical_mysteries
           - stoic_philosophy
           - deep_sea
           - riddles
       dry_run:
-        description: 'Generate video but skip upload'
+        description: 'Generate video but skip upload (for testing)'
         required: false
-        default: false
-        type: boolean
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   generate-and-upload:
-    name: "${{ github.event.inputs.niche || 'auto' }} — Generate & Upload"
+    name: "🎬 Daily Video Batch"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60   # two full videos need up to 60 min
 
     permissions:
       contents: write   # needed to commit topic history back to repo
 
-    # Rotate through niches automatically based on run number
-    # Morning = historical_mysteries / deep_sea
-    # Evening = stoic_philosophy / riddles
-    env:
-      NICHE: ${{ github.event.inputs.niche || 'historical_mysteries' }}
-
     steps:
-      # ── Setup ─────────────────────────────────────────────────────────────
+      # ── Setup ───────────────────────────────────────────────────────────────
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
@@ -65,7 +65,7 @@ jobs:
       - name: 📦 Install Python dependencies
         run: pip install -r requirements.txt
 
-      # ── Run pipeline ───────────────────────────────────────────────────────
+      # ── Run pipeline (two niches back-to-back) ──────────────────────────────
       - name: 🎬 Run video pipeline
         env:
           # Core AI
@@ -80,12 +80,12 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
 
-          # TikTok (global — add per-niche tokens when you have multiple accounts)
+          # TikTok
           TIKTOK_CLIENT_KEY:     ${{ secrets.TIKTOK_CLIENT_KEY }}
           TIKTOK_CLIENT_SECRET:  ${{ secrets.TIKTOK_CLIENT_SECRET }}
           TIKTOK_ACCESS_TOKEN:   ${{ secrets.TIKTOK_ACCESS_TOKEN }}
 
-          # Per-niche ElevenLabs voices (optional — falls back to default voice)
+          # Per-niche ElevenLabs voices (optional — falls back to default)
           EL_VOICE_HISTORY:      ${{ secrets.EL_VOICE_HISTORY }}
           EL_VOICE_STOIC:        ${{ secrets.EL_VOICE_STOIC }}
           EL_VOICE_OCEAN:        ${{ secrets.EL_VOICE_OCEAN }}
@@ -97,25 +97,52 @@ jobs:
           AFFILIATE_OCEAN:       ${{ secrets.AFFILIATE_OCEAN }}
           AFFILIATE_RIDDLES:     ${{ secrets.AFFILIATE_RIDDLES }}
 
-          # Active niche (set by matrix or manual input)
-          NICHE: ${{ env.NICHE }}
         run: |
           DRY_FLAG=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             DRY_FLAG="--dry-run"
           fi
-          python main.py $DRY_FLAG
 
-      # ── Upload video as downloadable artifact (dry-run only) ──────────────
-      - name: 📤 Upload preview video
+          # ── Determine which niches to run ────────────────────────────────
+          MANUAL_NICHE="${{ github.event.inputs.niche }}"
+          CURRENT_HOUR=$(date -u +%H)
+
+          if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
+            # Manual single-niche run
+            echo "▶ Running single niche: $MANUAL_NICHE"
+            NICHE=$MANUAL_NICHE python main.py $DRY_FLAG
+
+          elif [ "$CURRENT_HOUR" -ge 12 ] && [ "$CURRENT_HOUR" -lt 20 ]; then
+            # Morning batch (9am–4pm ET = 1pm–8pm UTC)
+            echo "▶ Morning batch: Historical Mysteries + Stoic Philosophy"
+            NICHE=historical_mysteries python main.py $DRY_FLAG
+            echo ""
+            echo "──────────────────────────────────────────────────────────"
+            echo "▶ Starting second video..."
+            echo "──────────────────────────────────────────────────────────"
+            NICHE=stoic_philosophy python main.py $DRY_FLAG
+
+          else
+            # Evening batch (9pm–11pm ET = 1am–3am UTC)
+            echo "▶ Evening batch: Ocean Mysteries + Mind Benders"
+            NICHE=deep_sea python main.py $DRY_FLAG
+            echo ""
+            echo "──────────────────────────────────────────────────────────"
+            echo "▶ Starting second video..."
+            echo "──────────────────────────────────────────────────────────"
+            NICHE=riddles python main.py $DRY_FLAG
+          fi
+
+      # ── Upload artifacts on dry-run ──────────────────────────────────────────
+      - name: 📤 Upload preview videos (dry-run only)
         if: ${{ github.event.inputs.dry_run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: preview-video-${{ env.NICHE }}
-          path: ${{ runner.temp }}/faceless/preview_video.mp4
-          retention-days: 3   # auto-deleted after 3 days
+          name: preview-videos-${{ github.run_id }}
+          path: ${{ runner.temp }}/faceless/
+          retention-days: 3
 
-      # ── Commit updated topic history ───────────────────────────────────────
+      # ── Commit topic history (merge strategy avoids rebase conflicts) ────────
       - name: 💾 Save topic history
         if: always()
         run: |
@@ -123,6 +150,8 @@ jobs:
           git config user.email "bot@faceless.local"
           git add data/used_topics.json
           git diff --staged --quiet || \
-            git commit -m "chore: update topic history [${{ env.NICHE }}] [skip ci]"
-          git pull --rebase origin main
-          git push
+            git commit -m "chore: update topic history [batch] [skip ci]"
+          # Use merge instead of rebase — resolves conflicts by keeping our new entries
+          git fetch origin main
+          git merge origin/main -X ours --no-edit || true
+          git push origin main
