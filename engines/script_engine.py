@@ -59,38 +59,38 @@ ANGLE: {topic['angle']}
 OPENING HOOK: {topic['hook']}
 {affiliate_instruction}
 
-─── SCRIPT REQUIREMENTS ───────────────────────────────────────────────────
-Narration length: exactly 130–160 words (≈45–55 seconds at natural speaking pace)
+─── SCRIPT REQUIREMENTS ──────────────────────────────────────────────
+Narration length: 75–95 words MAX (spoken in ≈30–38 seconds)
+This is a SHORT-FORM video — every single word must earn its place.
 
-Structure:
-  [HOOK]    First 2–3 sentences — shock/intrigue/question. No pleasantries.
-  [CONTENT] Build the story with 2–4 surprising facts or escalating details.
-  [TWIST]   One final surprising revelation or profound thought.
-  [CTA]     1–2 sentences max: "Follow for more [niche topic]!" or similar.
+Structure (tight, punchy):
+  [HOOK]    1–2 sentences — shock or question. No pleasantries.
+  [CONTENT] 2–3 surprising facts. Short sentences only.
+  [TWIST]   One final revelation.
+  [CTA]     1 sentence: “Follow for more!”
 
 Style rules:
-  ✦ Every sentence must earn its place — no filler
-  ✦ Short sentences (under 20 words) — easier to subtitle, punch harder
-  ✦ Audio-only friendly — no "as you can see" or visual references
-  ✦ Match the channel's specific voice/tone perfectly
-  ✦ End with a strong hook that makes viewers want more
+  ✦ Sentences under 12 words each
+  ✦ Audio-only friendly — no visual references
+  ✦ Match the channel's specific voice/tone
+  ✦ STRICT word limit: 75–95 words, count carefully
 
-─── METADATA REQUIREMENTS ─────────────────────────────────────────────────
-Title: max 70 chars, includes 1 emoji, ends with a teasing phrase
-Description: 2–3 sentences that naturally include keywords (SEO)
-Hashtags: 14 hashtags — must include #Shorts, #Viral, #{niche['display_name'].replace(' ','')}
-Thumbnail text: 3–5 words, ALL CAPS, punchy (e.g. "THEY HID THIS FROM US")
+─── METADATA REQUIREMENTS ──────────────────────────────────────────────
+Title: max 60 chars, 1 emoji, punchy hook
+Description: 2 sentences, SEO keywords
+Hashtags: 14, must include #Shorts, #Viral, #{niche['display_name'].replace(' ','')}
+Thumbnail text: 2–3 words MAX, ALL CAPS (e.g. “THEY HID THIS”)
 
-─── REPLY FORMAT ──────────────────────────────────────────────────────────
-Reply with ONLY this JSON object (no markdown, no explanation):
+─── REPLY FORMAT ──────────────────────────────────────────────────────
+Reply with ONLY this JSON (no markdown, no explanation):
 {{
   "title": "...",
   "description": "...",
   "hashtags": ["#Shorts", "#Viral", ...],
   "narration": "Full narration text here...",
-  "thumbnail_text": "SHOCKING TRUTH REVEALED",
-  "hook": "First 2 sentences of the narration.",
-  "cta": "Follow {niche['display_name']} for more mind-blowing content!"
+  "thumbnail_text": "THEY HID THIS",
+  "hook": "First sentence of narration.",
+  "cta": "Follow {niche['display_name']} for more!"
 }}
 """
 

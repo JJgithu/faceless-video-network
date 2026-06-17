@@ -60,21 +60,32 @@ def _video_duration(path: Path) -> float:
 
 # ── Portrait conversion ────────────────────────────────────────────────────
 
-def _to_portrait(src: Path, dst: Path, duration: float) -> None:
+def _to_portrait(src: Path, dst: Path, duration: float, pan_direction: int = 0) -> None:
     """
-    Convert a landscape (or any aspect-ratio) clip to 1080×1920 portrait.
-    Uses the "blurred background" technique:
-      - Background: the clip scaled to fill 1080×1920, then heavily blurred
-      - Foreground: the clip scaled to fit within 1080×1920, centred on top
-    Trims to `duration` seconds.
+    Convert any clip to portrait 1080x1920 — true full-bleed (no black bars).
+
+    Scale to FILL the frame (at least 1080 wide AND 1920 tall) then center-crop
+    the excess. Adds a slow horizontal pan and smooth fade in/out for a
+    cinematic motion feel between clips.
     """
+    fade_out_start = max(duration - 0.35, 0.1)
+
+    # Alternate pan directions for visual variety
+    if pan_direction == 0:    # pan right-to-left (x starts at max, moves toward 0)
+        crop_x = f"(iw-{W})*(1-t/{max(duration,0.1):.3f})"
+    elif pan_direction == 1:  # pan left-to-right (x starts at 0, moves toward max)
+        crop_x = f"(iw-{W})*t/{max(duration,0.1):.3f}"
+    else:                     # static center crop
+        crop_x = f"(iw-{W})/2"
+
     vf = (
-        "split=2[bg][fg];"
-        f"[bg]scale={W}:{H}:force_original_aspect_ratio=increase,"
-        f"crop={W}:{H},boxblur=25:5[blurred];"
-        f"[fg]scale={W}:-2:force_original_aspect_ratio=decrease,"
-        f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color=black@0[fgpad];"
-        "[blurred][fgpad]overlay=0:0"
+        # Scale to completely fill 1080x1920 (no letterboxing, no black bars)
+        f"scale={W}:{H}:force_original_aspect_ratio=increase,"
+        # Center-crop vertically; pan horizontally for motion
+        f"crop={W}:{H}:{crop_x}:(ih-{H})/2,"
+        # Smooth fade in/out between clips
+        f"fade=t=in:st=0:d=0.35,"
+        f"fade=t=out:st={fade_out_start:.2f}:d=0.35"
     )
     _run_ff(
         [
@@ -83,11 +94,12 @@ def _to_portrait(src: Path, dst: Path, duration: float) -> None:
             "-vf", vf,
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-pix_fmt", "yuv420p",
-            "-an",   # drop audio from clips — we'll add narration later
+            "-an",   # drop audio from clips — narration added later
             str(dst),
         ],
         label="portrait",
     )
+
 
 
 # ── Title / CTA cards ──────────────────────────────────────────────────────
@@ -127,29 +139,31 @@ def _render_card(
     draw.rectangle([0, H - 12, W, H], fill=accent_color)
 
     # Main text — wrap at ~18 chars for large font
-    font_main = _load_font(72)
-    font_sub = _load_font(38)
+    font_main = _load_font(60)
+    font_sub  = _load_font(32)
 
-    lines = textwrap.wrap(text, width=18)
-    total_text_h = len(lines) * 90
-    y_start = (H - total_text_h) // 2 - 60
+    lines = textwrap.wrap(text, width=16) or [text]
+    line_height = 78
+    total_text_h = len(lines) * line_height
+    y_start = (H - total_text_h) // 2 - (40 if sub_text else 0)
 
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font_main)
         tw = bbox[2] - bbox[0]
-        x = (W - tw) // 2
-        y = y_start + i * 90
-        # Shadow
-        draw.text((x + 4, y + 4), line, font=font_main, fill=(0, 0, 0))
+        x = max((W - tw) // 2, 40)   # at least 40px from edge
+        y = y_start + i * line_height
+        # Drop shadow
+        draw.text((x + 3, y + 3), line, font=font_main, fill=(0, 0, 0))
         draw.text((x, y), line, font=font_main, fill=(255, 255, 255))
 
-    # Sub-text
+    # Sub-text — one line only, truncated to 42 chars
     if sub_text:
-        bbox = draw.textbbox((0, 0), sub_text, font=font_sub)
+        sub_line = sub_text if len(sub_text) <= 42 else sub_text[:39] + "…"
+        bbox = draw.textbbox((0, 0), sub_line, font=font_sub)
         tw = bbox[2] - bbox[0]
-        x_sub = (W - tw) // 2
-        y_sub = y_start + len(lines) * 90 + 30
-        draw.text((x_sub, y_sub), sub_text, font=font_sub, fill=accent_color)
+        x_sub = max((W - tw) // 2, 40)
+        y_sub = y_start + len(lines) * line_height + 20
+        draw.text((x_sub, y_sub), sub_line, font=font_sub, fill=accent_color)
 
     frame_path = dest.parent / f"{dest.stem}_frame.png"
     img.save(frame_path)
@@ -328,8 +342,10 @@ def assemble_video(
     portrait_clips: list[Path] = []
     for i, clip in enumerate(assets["video_clips"]):
         dst = run_dir / f"portrait_{i:02d}.mp4"
-        clip_dur = min(_video_duration(clip), 15.0)  # cap individual clips at 15s
-        _to_portrait(clip, dst, clip_dur)
+        # Cap individual clips at 12s; alternate pan direction for variety
+        clip_dur = min(_video_duration(clip), 12.0)
+        pan = i % 3   # 0=pan-right, 1=pan-left, 2=static-center
+        _to_portrait(clip, dst, clip_dur, pan_direction=pan)
         portrait_clips.append(dst)
 
     # ── Step 2: Assemble b-roll ────────────────────────────────────────────
@@ -341,8 +357,8 @@ def assemble_video(
     log.info("Step 3/6 — Rendering title card…")
     intro_path = run_dir / "intro.mp4"
     _render_card(
-        text=script["thumbnail_text"],
-        sub_text=script["hook"][:60] + "…" if len(script["hook"]) > 60 else script["hook"],
+        text=script["thumbnail_text"],  # 2-3 words ALL CAPS — stays clean
+        sub_text="",                     # no sub-text on title card
         duration=config.INTRO_DURATION,
         dest=intro_path,
     )
