@@ -1,4 +1,10 @@
 .env
+# Google OAuth credentials — NEVER commit these
+scripts/client_secret*.json
+# ngrok binary
+ngrok.exe
+ngrok
+
 __pycache__/
 *.pyc
 *.pyo
