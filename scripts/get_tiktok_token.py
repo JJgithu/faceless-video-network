@@ -36,7 +36,6 @@ import requests
 
 TIKTOK_AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
-REDIRECT_URI = "http://localhost:8080/callback"
 SCOPES = "user.info.basic,video.publish,video.upload"
 
 
@@ -63,7 +62,14 @@ def main():
     parser = argparse.ArgumentParser(description="Get TikTok OAuth access token")
     parser.add_argument("--client-key",    required=True)
     parser.add_argument("--client-secret", required=True)
+    parser.add_argument(
+        "--redirect-uri",
+        default="http://localhost:8080/callback",
+        help="The redirect URI registered in TikTok developer portal (use your ngrok URL)",
+    )
     args = parser.parse_args()
+    redirect_uri = args.redirect_uri
+    print(f"Using redirect URI: {redirect_uri}")
 
     state = secrets.token_urlsafe(16)
     code_verifier = secrets.token_urlsafe(48)
@@ -73,7 +79,7 @@ def main():
         "client_key":            args.client_key,
         "scope":                 SCOPES,
         "response_type":         "code",
-        "redirect_uri":          REDIRECT_URI,
+        "redirect_uri":          redirect_uri,
         "state":                 state,
         "code_challenge":        code_challenge,
         "code_challenge_method": "S256",
@@ -109,7 +115,7 @@ def main():
             "client_secret":  args.client_secret,
             "code":           code,
             "grant_type":     "authorization_code",
-            "redirect_uri":   REDIRECT_URI,
+            "redirect_uri":   redirect_uri,
             "code_verifier":  code_verifier,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},

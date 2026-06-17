@@ -91,8 +91,14 @@ def run_pipeline(dry_run: bool = False) -> dict:
         log.info(f"✦ Video: {video['duration']:.1f}s → {video['video_file'].name}\n")
 
         if dry_run:
-            log.info("🔵 DRY RUN — skipping upload. Video saved to:")
-            log.info(f"   {video['video_file']}")
+            # Copy video to a stable path before cleanup so the
+            # GitHub Actions artifact upload step can find it
+            import shutil
+            artifact_path = config.OUTPUT_DIR / "preview_video.mp4"
+            shutil.copy(video["video_file"], artifact_path)
+            log.info(f"🔵 DRY RUN — video saved for download:")
+            log.info(f"   {artifact_path}")
+            results["video_file"] = str(artifact_path)
             results["success"] = True
             return results
 

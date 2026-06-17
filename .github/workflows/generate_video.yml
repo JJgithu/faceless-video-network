@@ -106,6 +106,15 @@ jobs:
           fi
           python main.py $DRY_FLAG
 
+      # ── Upload video as downloadable artifact (dry-run only) ──────────────
+      - name: 📤 Upload preview video
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-video-${{ env.NICHE }}
+          path: ${{ runner.temp }}/faceless/preview_video.mp4
+          retention-days: 3   # auto-deleted after 3 days
+
       # ── Commit updated topic history ───────────────────────────────────────
       - name: 💾 Save topic history
         if: always()   # Always commit even if upload failed (topic was still used)
