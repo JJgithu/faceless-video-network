@@ -1,0 +1,47 @@
+name: 🎬 Generate Channel Trailer
+
+on:
+  workflow_dispatch:   # manual trigger only
+
+jobs:
+  make-trailer:
+    name: "Generate SooooCool Channel Trailer"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 🔧 Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra libfontconfig1
+
+      - name: 📦 Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🎬 Generate trailer
+        env:
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+          ELEVENLABS_API_KEY:    ${{ secrets.ELEVENLABS_API_KEY }}
+          PEXELS_API_KEY:        ${{ secrets.PEXELS_API_KEY }}
+          EL_VOICE_HISTORY:      ${{ secrets.EL_VOICE_HISTORY }}
+          NICHE: historical_mysteries   # for config init only, overridden in script
+        run: python scripts/make_trailer.py
+
+      - name: 📤 Upload trailer video
+        uses: actions/upload-artifact@v4
+        with:
+          name: soooo-cool-channel-trailer
+          path: ${{ runner.temp }}/faceless/trailer.mp4
+          retention-days: 30
