@@ -119,26 +119,25 @@ def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _render_card(
+def _render_card_png(
     text: str,
     sub_text: str,
-    duration: float,
     dest: Path,
     bg_color: tuple = (10, 10, 20),
     accent_color: tuple = (255, 80, 80),
 ) -> None:
     """
-    Render a full-bleed title or CTA card as a silent video clip.
-    Uses Pillow to create the frame, then FFmpeg to make it a video.
+    Render a title or CTA card as a PNG image (no video encoding).
+    The PNG is overlaid on the b-roll via FFmpeg filter, not concatenated.
+    This ensures perfect audio/video sync — no separate silent segments.
     """
     img = Image.new("RGB", (W, H), color=bg_color)
     draw = ImageDraw.Draw(img)
 
-    # Accent bar at the top
-    draw.rectangle([0, 0, W, 12], fill=accent_color)
-    draw.rectangle([0, H - 12, W, H], fill=accent_color)
+    # Accent bars
+    draw.rectangle([0, 0, W, 10], fill=accent_color)
+    draw.rectangle([0, H - 10, W, H], fill=accent_color)
 
-    # Main text — wrap at ~18 chars for large font
     font_main = _load_font(60)
     font_sub  = _load_font(32)
 
@@ -150,13 +149,11 @@ def _render_card(
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font_main)
         tw = bbox[2] - bbox[0]
-        x = max((W - tw) // 2, 40)   # at least 40px from edge
+        x = max((W - tw) // 2, 40)
         y = y_start + i * line_height
-        # Drop shadow
         draw.text((x + 3, y + 3), line, font=font_main, fill=(0, 0, 0))
         draw.text((x, y), line, font=font_main, fill=(255, 255, 255))
 
-    # Sub-text — one line only, truncated to 42 chars
     if sub_text:
         sub_line = sub_text if len(sub_text) <= 42 else sub_text[:39] + "…"
         bbox = draw.textbbox((0, 0), sub_line, font=font_sub)
@@ -165,22 +162,49 @@ def _render_card(
         y_sub = y_start + len(lines) * line_height + 20
         draw.text((x_sub, y_sub), sub_line, font=font_sub, fill=accent_color)
 
-    frame_path = dest.parent / f"{dest.stem}_frame.png"
-    img.save(frame_path)
+    img.save(dest)
+
+
+def _overlay_cards(
+    broll: Path,
+    intro_png: Path,
+    outro_png: Path,
+    total_duration: float,
+    out: Path,
+) -> None:
+    """
+    Overlay the title card for the first INTRO_DURATION seconds and the CTA card
+    for the last OUTRO_DURATION seconds, directly on top of the b-roll.
+
+    The b-roll plays for the ENTIRE video — no separate silent intro/outro
+    segments means perfect audio/video sync and no black screen gaps.
+    """
+    intro_end   = config.INTRO_DURATION
+    outro_start = max(total_duration - config.OUTRO_DURATION, intro_end)
 
     _run_ff(
         [
-            "-loop", "1", "-i", str(frame_path),
-            "-t", str(duration),
-            "-vf", f"scale={W}:{H}",
+            "-i", str(broll),
+            "-loop", "1", "-i", str(intro_png),
+            "-loop", "1", "-i", str(outro_png),
+            "-filter_complex",
+            # Scale PNGs to exact frame size, then overlay with time gates
+            f"[1:v]scale={W}:{H}[intro_card];"
+            f"[2:v]scale={W}:{H}[outro_card];"
+            f"[0:v][intro_card]overlay=x=0:y=0:"
+            f"enable='between(t,0,{intro_end:.3f})'[v1];"
+            f"[v1][outro_card]overlay=x=0:y=0:"
+            f"enable='between(t,{outro_start:.3f},{total_duration:.3f})'[vout]",
+            "-map", "[vout]",
+            "-t", f"{total_duration:.3f}",
             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
             "-pix_fmt", "yuv420p",
             "-an",
-            str(dest),
+            str(out),
         ],
-        label="card",
+        label="overlay-cards",
     )
-    frame_path.unlink(missing_ok=True)
+
 
 
 # ── Clip assembly ──────────────────────────────────────────────────────────
@@ -261,7 +285,9 @@ def _mix_audio(
 ) -> None:
     """
     Combine the silent video with narration (100%) + background music (quiet).
-    The music loops/trims to match total_duration.
+    Music loops and fills the ENTIRE video duration.
+    Narration plays for its natural length; music continues solo after it ends
+    (covers the CTA overlay at the end with soft ambient sound).
     """
     music_vol = config.MUSIC_VOLUME
     _run_ff(
@@ -270,18 +296,22 @@ def _mix_audio(
             "-i", str(narration),
             "-stream_loop", "-1", "-i", str(music),
             "-filter_complex",
-            f"[1:a]volume=1.0[narr];"
-            f"[2:a]volume={music_vol},atrim=0:{total_duration},asetpts=PTS-STARTPTS[mus];"
-            f"[narr][mus]amix=inputs=2:duration=first:dropout_transition=2[audio]",
+            # Pad narration with silence so amix runs for full duration
+            f"[1:a]volume=1.0,apad=whole_dur={total_duration:.3f}[narr];"
+            f"[2:a]volume={music_vol},atrim=0:{total_duration:.3f},"
+            f"asetpts=PTS-STARTPTS[mus];"
+            # duration=longest: audio runs to full video duration
+            f"[narr][mus]amix=inputs=2:duration=longest:dropout_transition=1[audio]",
             "-map", "0:v",
             "-map", "[audio]",
-            "-t", str(total_duration),
+            "-t", f"{total_duration:.3f}",
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
             str(out),
         ],
         label="audio-mix",
     )
+
 
 
 # ── Caption burn-in ────────────────────────────────────────────────────────
@@ -327,60 +357,57 @@ def assemble_video(
 ) -> VideoResult:
     """
     Orchestrate all FFmpeg steps to produce the final portrait video.
+
+    New timeline (overlay-based — no sync gaps, no black screen):
+
+      t=0                          t=narration_duration
+      |-------- b-roll (full) ---------|    video = audio length
+      |--intro--|                           title card overlay (first 2.5s)
+                          |---outro--|       CTA overlay (last 3s)
+      |---- narration + music ----------|   audio = video length
     """
     log.info("═══ Video Engine: assembling final video ═══")
 
+    # Video = audio = narration length (no added silent segments)
     narration_duration = voice["duration"]
-    total_duration = (
-        config.INTRO_DURATION + narration_duration + config.OUTRO_DURATION
-    )
-    total_duration = min(total_duration, config.MAX_VIDEO_DURATION)
-    broll_duration = total_duration - config.INTRO_DURATION - config.OUTRO_DURATION
+    total_duration     = min(narration_duration, config.MAX_VIDEO_DURATION)
+    broll_duration     = total_duration   # b-roll fills the WHOLE video
 
     # ── Step 1: Convert clips to portrait ──────────────────────────────────
-    log.info("Step 1/6 — Converting clips to portrait 1080×1920…")
+    log.info("Step 1/5 — Converting clips to portrait 1080×1920…")
     portrait_clips: list[Path] = []
     for i, clip in enumerate(assets["video_clips"]):
         dst = run_dir / f"portrait_{i:02d}.mp4"
-        # Cap individual clips at 12s; alternate pan direction for variety
         clip_dur = min(_video_duration(clip), 12.0)
-        pan = i % 3   # 0=pan-right, 1=pan-left, 2=static-center
+        pan = i % 3
         _to_portrait(clip, dst, clip_dur, pan_direction=pan)
         portrait_clips.append(dst)
 
-    # ── Step 2: Assemble b-roll ────────────────────────────────────────────
-    log.info("Step 2/6 — Assembling b-roll segment…")
+    # ── Step 2: Assemble b-roll for FULL video duration ─────────────────────
+    log.info("Step 2/5 — Assembling b-roll segment…")
     broll_path = run_dir / "broll.mp4"
     _assemble_broll(portrait_clips, broll_duration, broll_path)
 
-    # ── Step 3: Title card (intro) ─────────────────────────────────────────
-    log.info("Step 3/6 — Rendering title card…")
-    intro_path = run_dir / "intro.mp4"
-    _render_card(
-        text=script["thumbnail_text"],  # 2-3 words ALL CAPS — stays clean
-        sub_text="",                     # no sub-text on title card
-        duration=config.INTRO_DURATION,
-        dest=intro_path,
+    # ── Step 3: Render card PNGs and overlay on b-roll ──────────────────────
+    log.info("Step 3/5 — Rendering title + CTA cards…")
+    intro_png = run_dir / "intro_card.png"
+    outro_png = run_dir / "outro_card.png"
+    _render_card_png(
+        text=script["thumbnail_text"],
+        sub_text="",
+        dest=intro_png,
     )
-
-    # ── Step 4: CTA card (outro) ───────────────────────────────────────────
-    log.info("Step 4/6 — Rendering CTA card…")
-    outro_path = run_dir / "outro.mp4"
-    _render_card(
-        text="FOLLOW",
+    _render_card_png(
+        text="FOLLOW FOR MORE",
         sub_text=script["cta"],
-        duration=config.OUTRO_DURATION,
-        dest=outro_path,
+        dest=outro_png,
         accent_color=(80, 200, 120),
     )
-
-    # ── Step 5: Concatenate all segments ──────────────────────────────────
-    log.info("Step 5/6 — Concatenating segments…")
     silent_video = run_dir / "silent.mp4"
-    _concat_segments([intro_path, broll_path, outro_path], silent_video)
+    _overlay_cards(broll_path, intro_png, outro_png, total_duration, silent_video)
 
-    # ── Step 6: Mix audio ──────────────────────────────────────────────────
-    log.info("Step 6a/6 — Mixing narration + background music…")
+    # ── Step 4: Mix audio (narration + music, full video length) ────────────
+    log.info("Step 4/5 — Mixing narration + background music…")
     mixed_video = run_dir / "mixed.mp4"
     _mix_audio(
         silent_video,
@@ -390,8 +417,8 @@ def assemble_video(
         mixed_video,
     )
 
-    # ── Step 7: Burn captions ──────────────────────────────────────────────
-    log.info("Step 6b/6 — Burning kinetic captions…")
+    # ── Step 5: Burn captions ────────────────────────────────────────────────
+    log.info("Step 5/5 — Burning kinetic captions…")
     final_video = run_dir / "final.mp4"
     _burn_captions(mixed_video, voice["ass_file"], final_video)
 
