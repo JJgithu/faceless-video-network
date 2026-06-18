@@ -123,13 +123,14 @@ Structure (tight, punchy):
   [HOOK]    1–2 sentences — shock or question. No pleasantries.
   [CONTENT] 2–3 surprising facts. Short sentences only.
   [TWIST]   One final revelation.
-  [CTA]     1 sentence: “Follow for more!”
+  [CTA]     1 sentence: "Hit like and subscribe for more!"
 
 Style rules:
   ✦ Sentences under 12 words each
   ✦ Audio-only friendly — no visual references
   ✦ Match the channel's specific voice/tone
   ✦ STRICT word limit: 75–95 words, count carefully
+  ✦ The final CTA must ALWAYS be exactly: "Hit like and subscribe for more!"
 
 ─── METADATA REQUIREMENTS ──────────────────────────────────────────────
 Title: max 60 chars, 1 emoji, punchy hook
@@ -151,6 +152,9 @@ Reply with ONLY this JSON (no markdown, no explanation):
 """
 
     script: Script = ask_json(prompt)
+
+    # Always enforce the CTA — never let Gemini use a channel-specific phrase
+    script["cta"] = "Hit like and subscribe for more!"
 
     # ── Enforce invariants ──────────────────────────────────────────────────────
     if "#Shorts" not in script["hashtags"]:
