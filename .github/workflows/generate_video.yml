@@ -85,6 +85,10 @@ jobs:
           TIKTOK_CLIENT_SECRET:  ${{ secrets.TIKTOK_CLIENT_SECRET }}
           TIKTOK_ACCESS_TOKEN:   ${{ secrets.TIKTOK_ACCESS_TOKEN }}
 
+          # Affiliate (Amazon Associates covers both Amazon books + Audible)
+          AMAZON_AFFILIATE_TAG:  ${{ secrets.AMAZON_AFFILIATE_TAG }}
+          AUDIBLE_AFFILIATE_TAG: ${{ secrets.AUDIBLE_AFFILIATE_TAG }}
+
           # Per-niche ElevenLabs voices (optional — falls back to default)
           EL_VOICE_HISTORY:      ${{ secrets.EL_VOICE_HISTORY }}
           EL_VOICE_STOIC:        ${{ secrets.EL_VOICE_STOIC }}
@@ -103,35 +107,35 @@ jobs:
             DRY_FLAG="--dry-run"
           fi
 
-          # ── Determine which niches to run ────────────────────────────────
+          # ── Determine which niches to run ──────────────────────────────────
+          # Use github.event.schedule to reliably pick morning vs evening batch.
+          # Manual dispatch with specific niche runs just that one niche.
+          # Manual dispatch with 'auto_batch' runs both morning niches.
           MANUAL_NICHE="${{ github.event.inputs.niche }}"
-          CURRENT_HOUR=$(date -u +%H)
+          SCHEDULE="${{ github.event.schedule }}"
 
           if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
-            # Manual single-niche run
-            echo "▶ Running single niche: $MANUAL_NICHE"
-            NICHE=$MANUAL_NICHE python main.py $DRY_FLAG
-
-          elif [ "$CURRENT_HOUR" -ge 12 ] && [ "$CURRENT_HOUR" -lt 20 ]; then
-            # Morning batch (9am–4pm ET = 1pm–8pm UTC)
-            echo "▶ Morning batch: Historical Mysteries + Stoic Philosophy"
-            NICHE=historical_mysteries python main.py $DRY_FLAG
-            echo ""
-            echo "──────────────────────────────────────────────────────────"
-            echo "▶ Starting second video..."
-            echo "──────────────────────────────────────────────────────────"
-            NICHE=stoic_philosophy python main.py $DRY_FLAG
-
+            # Single niche manual run
+            NICHES="$MANUAL_NICHE"
+          elif [ "$SCHEDULE" = "0 13 * * *" ]; then
+            # 9am ET morning batch
+            NICHES="historical_mysteries stoic_philosophy"
+          elif [ "$SCHEDULE" = "0 1 * * *" ]; then
+            # 9pm ET evening batch
+            NICHES="deep_sea riddles"
           else
-            # Evening batch (9pm–11pm ET = 1am–3am UTC)
-            echo "▶ Evening batch: Ocean Mysteries + Mind Benders"
-            NICHE=deep_sea python main.py $DRY_FLAG
-            echo ""
-            echo "──────────────────────────────────────────────────────────"
-            echo "▶ Starting second video..."
-            echo "──────────────────────────────────────────────────────────"
-            NICHE=riddles python main.py $DRY_FLAG
+            # Manual auto_batch or unrecognized — run morning pair
+            NICHES="historical_mysteries stoic_philosophy"
           fi
+
+          echo "► Niches to run: $NICHES"
+          for NICHE in $NICHES; do
+            echo ""
+            echo "────────────────────────────────────────────────────────"
+            echo "► Starting video: $NICHE"
+            echo "────────────────────────────────────────────────────────"
+            NICHE=$NICHE python main.py $DRY_FLAG
+          done
 
       # ── Upload artifacts on dry-run ──────────────────────────────────────────
       - name: 📤 Upload preview videos (dry-run only)

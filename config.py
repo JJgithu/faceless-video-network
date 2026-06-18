@@ -43,6 +43,11 @@ TIKTOK_CLIENT_KEY    = os.environ.get("TIKTOK_CLIENT_KEY", "")
 TIKTOK_CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 TIKTOK_ACCESS_TOKEN  = os.environ.get("TIKTOK_ACCESS_TOKEN", "")
 
+# Affiliate tags (one tag covers all books/products)
+# Sign up free at: affiliate-program.amazon.com (covers both Amazon & Audible)
+AUDIBLE_AFFILIATE_TAG = os.environ.get("AUDIBLE_AFFILIATE_TAG", "") or os.environ.get("AMAZON_AFFILIATE_TAG", "")
+AMAZON_AFFILIATE_TAG  = os.environ.get("AMAZON_AFFILIATE_TAG", "")
+
 # ── Gemini ─────────────────────────────────────────────────────────────────
 GEMINI_MODEL = "gemini-2.5-flash"
 
@@ -98,6 +103,7 @@ TIKTOK_DISABLE_STITCH  = False
 NICHES: dict[str, dict] = {
 
     "historical_mysteries": {
+        "key": "historical_mysteries",
         "display_name": "Historical Mysteries",
         "emoji": "🏛️",
         # Script tone given to Gemini
@@ -122,6 +128,7 @@ NICHES: dict[str, dict] = {
     },
 
     "stoic_philosophy": {
+        "key": "stoic_philosophy",
         "display_name": "Stoic Wisdom",
         "emoji": "🧘",
         "style": (
@@ -139,6 +146,7 @@ NICHES: dict[str, dict] = {
     },
 
     "deep_sea": {
+        "key": "deep_sea",
         "display_name": "Ocean Mysteries",
         "emoji": "🌊",
         "style": (
@@ -156,6 +164,7 @@ NICHES: dict[str, dict] = {
     },
 
     "riddles": {
+        "key": "riddles",
         "display_name": "Mind Benders",
         "emoji": "🧩",
         "style": (
