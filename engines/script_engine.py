@@ -171,8 +171,8 @@ Reply with ONLY this JSON (no markdown, no explanation):
     if book:
         book_title = book["title"]
         affiliate_line = (
-            f"\n\n📚 Get the book on Amazon: \"{book['title']}\" by {book['author']}"
-            f"\n➡️ {book['audible_url']}"
+            f"\n\n📚 Get the book on Amazon: \"{book['title']}\" by {book['author']}\n"
+            f"{book['audible_url']}"
         )
         log.info(f"Affiliate book selected: {book_title}")
 
