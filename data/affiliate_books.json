@@ -1,5 +1,5 @@
 {
-  "_note": "Affiliate links: replace YOURTAG with your Audible/Amazon affiliate tag (e.g. mysite-20)",
+  "_note": "Uses Amazon search URLs (not direct ASINs) for reliability. Replace YOURTAG with your Amazon Associates tag.",
   "_tag_placeholder": "YOURTAG",
 
   "historical_mysteries": [
@@ -7,49 +7,49 @@
       "title": "Devil in the White City",
       "author": "Erik Larson",
       "keywords": ["murder", "serial killer", "fair", "chicago", "crime", "hidden", "secret"],
-      "audible_url": "https://www.amazon.com/dp/B000R3FVKM?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Devil+in+the+White+City+Erik+Larson&tag=YOURTAG"
     },
     {
       "title": "Sapiens: A Brief History of Humankind",
       "author": "Yuval Noah Harari",
       "keywords": ["human", "civilization", "ancient", "evolution", "origins", "species", "prehistoric"],
-      "audible_url": "https://www.amazon.com/dp/B00ICN066A?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Sapiens+Yuval+Noah+Harari&tag=YOURTAG"
     },
     {
       "title": "The Lost City of the Monkey God",
       "author": "Douglas Preston",
       "keywords": ["lost city", "jungle", "archaeology", "ruins", "expedition", "discovery", "hidden civilization"],
-      "audible_url": "https://www.amazon.com/dp/B01MXZ4QZV?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Lost+City+Monkey+God+Douglas+Preston&tag=YOURTAG"
     },
     {
       "title": "The Code Book: The Science of Secrecy",
       "author": "Simon Singh",
       "keywords": ["code", "cipher", "secret", "encryption", "mystery", "manuscript", "message", "unsolved"],
-      "audible_url": "https://www.amazon.com/dp/B004DEPHIA?tag=YOURTAG"
-    },
-    {
-      "title": "Killing the Killers",
-      "author": "Bill O'Reilly",
-      "keywords": ["assassination", "killing", "death", "conspiracy", "murder", "historical", "war"],
-      "audible_url": "https://www.amazon.com/dp/B09VCSBKVH?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Code+Book+Simon+Singh&tag=YOURTAG"
     },
     {
       "title": "Dead Mountain: The Untold Story of the Dyatlov Pass Incident",
       "author": "Donnie Eichar",
       "keywords": ["mystery", "disappearance", "mountain", "cold", "unsolved", "death", "strange"],
-      "audible_url": "https://www.amazon.com/dp/B00GK5J84U?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Dead+Mountain+Dyatlov+Pass+Donnie+Eichar&tag=YOURTAG"
     },
     {
       "title": "The Radium Girls",
       "author": "Kate Moore",
       "keywords": ["poison", "factory", "corporate", "cover-up", "women", "radiation", "scandal"],
-      "audible_url": "https://www.amazon.com/dp/B071NSB78N?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Radium+Girls+Kate+Moore&tag=YOURTAG"
     },
     {
       "title": "Lost to the West",
       "author": "Lars Brownworth",
       "keywords": ["byzantine", "empire", "rome", "medieval", "ancient", "forgotten", "history"],
-      "audible_url": "https://www.amazon.com/dp/B002V9Z7FO?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Lost+to+the+West+Lars+Brownworth&tag=YOURTAG"
+    },
+    {
+      "title": "The Wager",
+      "author": "David Grann",
+      "keywords": ["shipwreck", "survival", "mutiny", "sea", "adventure", "stranded", "history"],
+      "audible_url": "https://www.amazon.com/s?k=The+Wager+David+Grann&tag=YOURTAG"
     }
   ],
 
@@ -58,43 +58,43 @@
       "title": "Meditations",
       "author": "Marcus Aurelius",
       "keywords": ["stoic", "philosophy", "emperor", "wisdom", "virtue", "mind", "discipline"],
-      "audible_url": "https://www.amazon.com/dp/B00LGO78RW?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Meditations+Marcus+Aurelius&tag=YOURTAG"
     },
     {
       "title": "Man's Search for Meaning",
       "author": "Viktor Frankl",
       "keywords": ["meaning", "purpose", "suffering", "resilience", "survival", "mindset", "psychology"],
-      "audible_url": "https://www.amazon.com/dp/B009U9S6FI?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Man+Search+for+Meaning+Viktor+Frankl&tag=YOURTAG"
     },
     {
       "title": "The Obstacle Is the Way",
       "author": "Ryan Holiday",
       "keywords": ["obstacle", "adversity", "challenge", "stoic", "perseverance", "growth", "mindset"],
-      "audible_url": "https://www.amazon.com/dp/B00K5JUNSU?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Obstacle+Is+the+Way+Ryan+Holiday&tag=YOURTAG"
     },
     {
       "title": "The Daily Stoic",
       "author": "Ryan Holiday",
       "keywords": ["daily", "stoic", "practice", "wisdom", "morning", "routine", "philosophy"],
-      "audible_url": "https://www.amazon.com/dp/B01HNJIJ58?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Daily+Stoic+Ryan+Holiday&tag=YOURTAG"
     },
     {
       "title": "Atomic Habits",
       "author": "James Clear",
       "keywords": ["habits", "discipline", "change", "behavior", "small", "improvement", "consistency"],
-      "audible_url": "https://www.amazon.com/dp/B07RFSSYBH?tag=YOURTAG"
-    },
-    {
-      "title": "The Power of Now",
-      "author": "Eckhart Tolle",
-      "keywords": ["present", "moment", "mindfulness", "peace", "consciousness", "ego", "awareness"],
-      "audible_url": "https://www.amazon.com/dp/B00V2Z9NEC?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Atomic+Habits+James+Clear&tag=YOURTAG"
     },
     {
       "title": "Can't Hurt Me",
       "author": "David Goggins",
       "keywords": ["mental", "toughness", "pain", "endurance", "discipline", "suffering", "strength"],
-      "audible_url": "https://www.amazon.com/dp/B07KKP62FN?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Cant+Hurt+Me+David+Goggins&tag=YOURTAG"
+    },
+    {
+      "title": "The Power of Now",
+      "author": "Eckhart Tolle",
+      "keywords": ["present", "moment", "mindfulness", "peace", "consciousness", "ego", "awareness"],
+      "audible_url": "https://www.amazon.com/s?k=The+Power+of+Now+Eckhart+Tolle&tag=YOURTAG"
     }
   ],
 
@@ -103,37 +103,37 @@
       "title": "The Soul of an Octopus",
       "author": "Sy Montgomery",
       "keywords": ["octopus", "intelligence", "creature", "marine", "ocean", "animal", "consciousness"],
-      "audible_url": "https://www.amazon.com/dp/B00LLZUPV6?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Soul+of+an+Octopus+Sy+Montgomery&tag=YOURTAG"
     },
     {
       "title": "Kraken: The Curious, Exciting, and Slightly Disturbing Science of Squid",
       "author": "Wendy Williams",
       "keywords": ["squid", "kraken", "giant", "deep sea", "creature", "cephalopod", "ocean"],
-      "audible_url": "https://www.amazon.com/dp/B0047Q4SYG?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Kraken+Wendy+Williams+squid&tag=YOURTAG"
     },
     {
       "title": "The Brilliant Abyss",
       "author": "Helen Scales",
       "keywords": ["deep sea", "abyss", "ocean", "discovery", "creatures", "exploration", "darkness"],
-      "audible_url": "https://www.amazon.com/dp/B095LNG8KT?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Brilliant+Abyss+Helen+Scales&tag=YOURTAG"
     },
     {
       "title": "Blue Mind",
       "author": "Wallace J. Nichols",
       "keywords": ["ocean", "water", "mind", "calm", "blue", "sea", "psychology", "peace"],
-      "audible_url": "https://www.amazon.com/dp/B00MFOU1US?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Blue+Mind+Wallace+Nichols&tag=YOURTAG"
     },
     {
-      "title": "Five Billion Years of Solitude",
-      "author": "Lee Billings",
-      "keywords": ["planet", "space", "ocean", "earth", "life", "universe", "discovery"],
-      "audible_url": "https://www.amazon.com/dp/B00GTJOPMU?tag=YOURTAG"
+      "title": "Other Minds: The Octopus, the Sea, and the Deep Origins of Consciousness",
+      "author": "Peter Godfrey-Smith",
+      "keywords": ["octopus", "consciousness", "evolution", "intelligence", "mind", "animal", "sea"],
+      "audible_url": "https://www.amazon.com/s?k=Other+Minds+Octopus+Peter+Godfrey-Smith&tag=YOURTAG"
     },
     {
       "title": "Shark Lady",
       "author": "Jess Keating",
       "keywords": ["shark", "marine", "biologist", "ocean", "predator", "woman", "pioneer"],
-      "audible_url": "https://www.amazon.com/dp/B074KQPDGT?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Shark+Lady+Jess+Keating&tag=YOURTAG"
     }
   ],
 
@@ -142,37 +142,37 @@
       "title": "Are You Smart Enough to Work at Google?",
       "author": "William Poundstone",
       "keywords": ["puzzle", "brain", "logic", "smart", "problem", "thinking", "challenge"],
-      "audible_url": "https://www.amazon.com/dp/B004JXXKQ0?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Are+You+Smart+Enough+Work+Google+Poundstone&tag=YOURTAG"
     },
     {
       "title": "The Art of Thinking Clearly",
       "author": "Rolf Dobelli",
       "keywords": ["thinking", "bias", "logic", "decision", "cognitive", "error", "clear"],
-      "audible_url": "https://www.amazon.com/dp/B00C4CRIBU?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Art+of+Thinking+Clearly+Rolf+Dobelli&tag=YOURTAG"
     },
     {
       "title": "How to Think Like Sherlock Holmes",
       "author": "Maria Konnikova",
       "keywords": ["sherlock", "deduction", "logic", "observation", "detective", "puzzle", "reasoning"],
-      "audible_url": "https://www.amazon.com/dp/B00BWYDMK8?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Think+Like+Sherlock+Holmes+Maria+Konnikova&tag=YOURTAG"
     },
     {
       "title": "Thinking, Fast and Slow",
       "author": "Daniel Kahneman",
       "keywords": ["thinking", "brain", "fast", "slow", "decision", "psychology", "bias", "logic"],
-      "audible_url": "https://www.amazon.com/dp/B005Z9GAJG?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=Thinking+Fast+and+Slow+Daniel+Kahneman&tag=YOURTAG"
     },
     {
       "title": "The Puzzler",
       "author": "A.J. Jacobs",
       "keywords": ["puzzle", "crossword", "riddle", "game", "challenge", "solve", "competition"],
-      "audible_url": "https://www.amazon.com/dp/B09DPQ1KMP?tag=YOURTAG"
+      "audible_url": "https://www.amazon.com/s?k=The+Puzzler+AJ+Jacobs&tag=YOURTAG"
     },
     {
-      "title": "Brain Games: The Mind-Blowing Science of Your Amazing Brain",
-      "author": "National Geographic",
-      "keywords": ["brain", "trick", "illusion", "perception", "mind", "optical", "game"],
-      "audible_url": "https://www.amazon.com/dp/B07QRF7DGN?tag=YOURTAG"
+      "title": "Surely You're Joking, Mr. Feynman!",
+      "author": "Richard Feynman",
+      "keywords": ["genius", "science", "humor", "curious", "physics", "mind", "clever"],
+      "audible_url": "https://www.amazon.com/s?k=Surely+Youre+Joking+Mr+Feynman&tag=YOURTAG"
     }
   ]
 }
