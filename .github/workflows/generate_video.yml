@@ -8,6 +8,12 @@ on:
     - cron: '0 13 * * *'   # 9am ET  — Batch 1
     - cron: '0 1  * * *'   # 9pm ET  — Batch 2
 
+  # External trigger (cron-job.org backup in case GitHub scheduler skips)
+  # POST https://api.github.com/repos/JJgithu/faceless-video-network/dispatches
+  # Body: {"event_type": "morning_batch"} or {"event_type": "evening_batch"}
+  repository_dispatch:
+    types: [morning_batch, evening_batch]
+
   # Manual trigger — pick one niche or run the full batch
   workflow_dispatch:
     inputs:
@@ -108,23 +114,28 @@ jobs:
           fi
 
           # ── Determine which niches to run ──────────────────────────────────
-          # Use github.event.schedule to reliably pick morning vs evening batch.
-          # Manual dispatch with specific niche runs just that one niche.
-          # Manual dispatch with 'auto_batch' runs both morning niches.
+          # Priority: manual niche > repository_dispatch event > schedule cron
           MANUAL_NICHE="${{ github.event.inputs.niche }}"
           SCHEDULE="${{ github.event.schedule }}"
+          DISPATCH_TYPE="${{ github.event.action }}"
 
           if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
             # Single niche manual run
             NICHES="$MANUAL_NICHE"
+          elif [ "$DISPATCH_TYPE" = "morning_batch" ]; then
+            # Triggered by cron-job.org morning call
+            NICHES="historical_mysteries stoic_philosophy"
+          elif [ "$DISPATCH_TYPE" = "evening_batch" ]; then
+            # Triggered by cron-job.org evening call
+            NICHES="deep_sea riddles"
           elif [ "$SCHEDULE" = "0 13 * * *" ]; then
-            # 9am ET morning batch
+            # 9am ET GitHub scheduled morning batch
             NICHES="historical_mysteries stoic_philosophy"
           elif [ "$SCHEDULE" = "0 1 * * *" ]; then
-            # 9pm ET evening batch
+            # 9pm ET GitHub scheduled evening batch
             NICHES="deep_sea riddles"
           else
-            # Manual auto_batch or unrecognized — run morning pair
+            # Manual auto_batch — run morning pair by default
             NICHES="historical_mysteries stoic_philosophy"
           fi
 
