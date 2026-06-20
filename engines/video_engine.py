@@ -216,18 +216,19 @@ def _assemble_broll(
 ) -> None:
     """
     Concatenate portrait clips (looping if needed) to fill target_duration.
-    Writes a silent video segment.
+    Generates 2s extra buffer so the hard -t trim always has content to cut.
     """
-    clips_needed: list[Path] = []
+    buffered = target_duration + 2.0   # always overshoot slightly
+    clips_needed: list[tuple[Path, float]] = []
     total = 0.0
     pool = list(portrait_clips)
 
-    while total < target_duration:
+    while total < buffered:
         for clip in pool:
-            dur = min(_video_duration(clip), target_duration - total)
+            dur = min(_video_duration(clip), buffered - total)
             clips_needed.append((clip, dur))
             total += dur
-            if total >= target_duration:
+            if total >= buffered:
                 break
 
     # Build concat file
@@ -236,11 +237,14 @@ def _assemble_broll(
         for clip, dur in clips_needed:
             fh.write(f"file '{clip.as_posix()}'\n")
             fh.write(f"duration {dur:.3f}\n")
+        # Repeat last clip without duration so FFmpeg always has a final frame
+        fh.write(f"file '{clips_needed[-1][0].as_posix()}'\n")
 
     _run_ff(
         [
             "-f", "concat", "-safe", "0",
             "-i", str(concat_file),
+            "-t", f"{target_duration:.3f}",   # hard trim to exact target
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-pix_fmt", "yuv420p",
             "-an",
@@ -285,9 +289,8 @@ def _mix_audio(
 ) -> None:
     """
     Combine the silent video with narration (100%) + background music (quiet).
-    Music loops and fills the ENTIRE video duration.
-    Narration plays for its natural length; music continues solo after it ends
-    (covers the CTA overlay at the end with soft ambient sound).
+    Uses tpad to clone the last video frame if the video stream is shorter than
+    the audio, so there is never a black screen gap.
     """
     music_vol = config.MUSIC_VOLUME
     _run_ff(
@@ -296,17 +299,19 @@ def _mix_audio(
             "-i", str(narration),
             "-stream_loop", "-1", "-i", str(music),
             "-filter_complex",
-            # Pad narration with silence so amix runs for full duration
+            # Clone last video frame for up to 5s so video never ends before audio
+            f"[0:v]tpad=stop_mode=clone:stop_duration=5[vpad];"
+            # Pad narration with silence then mix with music for full duration
             f"[1:a]volume=1.0,apad=whole_dur={total_duration:.3f}[narr];"
             f"[2:a]volume={music_vol},atrim=0:{total_duration:.3f},"
             f"asetpts=PTS-STARTPTS[mus];"
-            # duration=longest: audio runs to full video duration
             f"[narr][mus]amix=inputs=2:duration=longest:dropout_transition=1[audio]",
-            "-map", "0:v",
+            "-map", "[vpad]",
             "-map", "[audio]",
             "-t", f"{total_duration:.3f}",
-            "-c:v", "copy",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "22",
             "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p",
             str(out),
         ],
         label="audio-mix",

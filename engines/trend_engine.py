@@ -199,7 +199,39 @@ Reply with ONE JSON object:
     return result
 
 
-# ── Public API ─────────────────────────────────────────────────────────────
+def _gemini_topic_fallback(niche: dict, used_topics: set[str]) -> list[str]:
+    """
+    When ALL external sources fail (Reddit blocked, Google 404, no Wikipedia),
+    ask Gemini to brainstorm fresh topic ideas directly from its own knowledge.
+    Returns a list of topic title strings ready for _rank_with_gemini.
+    """
+    log.warning("All external sources failed — using Gemini topic brainstorm as fallback")
+    used_sample = [t.split("::")[-1] for t in list(used_topics)[-20:]]
+
+    prompt = f"""
+ You are a viral content researcher for a short-form video channel called
+ "{niche['display_name']}" {niche['emoji']}.
+ Channel style: {niche['style']}
+
+ Generate 12 compelling, specific topic ideas for this channel.
+ Each topic should be:
+ ✅ Genuinely surprising, emotional, or mind-bending
+ ✅ Based on real facts or well-known historical/philosophical events
+ ✅ Explainable in under 60 seconds
+ ✅ NOT in this recently covered list: {used_sample or '(none)'}
+
+ Reply with ONLY a JSON array of 12 topic title strings:
+ ["Topic 1", "Topic 2", ...]
+ """
+    try:
+        topics = ask_json(prompt)
+        if isinstance(topics, list) and topics:
+            log.info(f"Gemini fallback generated {len(topics)} topic ideas")
+            return [str(t) for t in topics[:12]]
+    except Exception as exc:
+        log.warning(f"Gemini fallback also failed: {exc}")
+    return []
+
 
 def get_trending_topic() -> Topic:
     """
@@ -230,6 +262,10 @@ def get_trending_topic() -> Topic:
     candidates = [c for c in candidates if c.lower() not in used_titles]
     random.shuffle(candidates)
     candidates = candidates[:45]
+
+    # Gemini fallback — if all external sources failed, generate ideas directly
+    if not candidates:
+        candidates = _gemini_topic_fallback(niche, niche_used)
 
     if not candidates:
         raise RuntimeError(
