@@ -156,8 +156,19 @@ def generate_script(topic: Topic) -> Script:
             f"the description for more information about this topic."
         )
 
-    prompt = f"""
-You are a professional scriptwriter for the viral short-video channel
+    # Pre-compute the structure block OUTSIDE the f-string.
+    # Python f-strings cannot contain triple-quoted strings inside {} expressions.
+    _default_structure = (
+        "Structure (tight, punchy):\n"
+        "  [HOOK]    1-2 sentences -- shock or question. No pleasantries.\n"
+        "  [CONTENT] 2-3 surprising facts. Short sentences only.\n"
+        "  [TWIST]   One final revelation.\n"
+        "  [CTA]     1 sentence: \"Hit like and subscribe for more!\"\n"
+    )
+    structure_block = niche_extras if niche_extras else _default_structure
+    niche_hashtag = niche['display_name'].replace(' ', '')
+
+    prompt = f"""You are a professional scriptwriter for the viral short-video channel
 "{niche['display_name']}" {niche['emoji']}.
 
 Channel voice / style:
@@ -172,28 +183,22 @@ OPENING HOOK: {topic['hook']}
 Narration length: 75-95 words MAX (spoken in ~30-38 seconds)
 This is a SHORT-FORM video -- every single word must earn its place.
 
-{niche_extras if niche_extras else """
-Structure (tight, punchy):
-  [HOOK]    1-2 sentences -- shock or question. No pleasantries.
-  [CONTENT] 2-3 surprising facts. Short sentences only.
-  [TWIST]   One final revelation.
-  [CTA]     1 sentence: "Hit like and subscribe for more!"
-"""}
+{structure_block}
 
 Style rules:
   - Sentences under 10 words each -- short, punchy, unstoppable rhythm
-  - Audio-only friendly -- no visual references ("as you can see", "look at this")
-  - Match the channel's specific voice/tone EXACTLY
+  - Audio-only friendly -- no visual references
+  - Match the channel voice/tone EXACTLY
   - STRICT word limit: 75-95 words, count carefully
   - The final CTA must ALWAYS be exactly: "Hit like and subscribe for more!"
 
 --- METADATA REQUIREMENTS ---
-Title: max 60 chars, 1 emoji, punchy hook -- make it impossible NOT to click
+Title: max 60 chars, 1 emoji, punchy hook
 Description: 2 sentences, SEO keywords
-Hashtags: 14, must include #Shorts, #Viral, #{niche['display_name'].replace(' ','')}
+Hashtags: 14, must include #Shorts, #Viral, #{niche_hashtag}
 Thumbnail text: 2-3 words MAX, ALL CAPS (e.g. "THEY HID THIS")
 
-─── REPLY FORMAT ──────────────────────────────────────────────────────
+--- REPLY FORMAT ---
 Reply with ONLY this JSON (no markdown, no explanation):
 {{
   "title": "...",
@@ -202,7 +207,7 @@ Reply with ONLY this JSON (no markdown, no explanation):
   "narration": "Full narration text here...",
   "thumbnail_text": "THEY HID THIS",
   "hook": "First sentence of narration.",
-  "cta": "Follow {niche['display_name']} for more!"
+  "cta": "Hit like and subscribe for more!"
 }}
 """
 
