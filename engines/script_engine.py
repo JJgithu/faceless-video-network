@@ -168,30 +168,30 @@ ANGLE: {topic['angle']}
 OPENING HOOK: {topic['hook']}
 {affiliate_instruction}
 
-─── SCRIPT REQUIREMENTS ──────────────────────────────────────────────
-Narration length: 75–95 words MAX (spoken in ≈30–38 seconds)
-This is a SHORT-FORM video — every single word must earn its place.
+--- SCRIPT REQUIREMENTS ---
+Narration length: 75-95 words MAX (spoken in ~30-38 seconds)
+This is a SHORT-FORM video -- every single word must earn its place.
 
 {niche_extras if niche_extras else """
 Structure (tight, punchy):
-  [HOOK]    1–2 sentences — shock or question. No pleasantries.
-  [CONTENT] 2–3 surprising facts. Short sentences only.
+  [HOOK]    1-2 sentences -- shock or question. No pleasantries.
+  [CONTENT] 2-3 surprising facts. Short sentences only.
   [TWIST]   One final revelation.
   [CTA]     1 sentence: "Hit like and subscribe for more!"
 """}
 
 Style rules:
-  ✦ Sentences under 10 words each — short, punchy, unstoppable rhythm
-  ✦ Audio-only friendly — no visual references ("as you can see", "look at this")
-  ✦ Match the channel's specific voice/tone EXACTLY
-  ✦ STRICT word limit: 75–95 words, count carefully
-  ✦ The final CTA must ALWAYS be exactly: "Hit like and subscribe for more!"
+  - Sentences under 10 words each -- short, punchy, unstoppable rhythm
+  - Audio-only friendly -- no visual references ("as you can see", "look at this")
+  - Match the channel's specific voice/tone EXACTLY
+  - STRICT word limit: 75-95 words, count carefully
+  - The final CTA must ALWAYS be exactly: "Hit like and subscribe for more!"
 
-─── METADATA REQUIREMENTS ──────────────────────────────────────────────
-Title: max 60 chars, 1 emoji, punchy hook — make it impossible NOT to click
+--- METADATA REQUIREMENTS ---
+Title: max 60 chars, 1 emoji, punchy hook -- make it impossible NOT to click
 Description: 2 sentences, SEO keywords
 Hashtags: 14, must include #Shorts, #Viral, #{niche['display_name'].replace(' ','')}
-Thumbnail text: 2–3 words MAX, ALL CAPS (e.g. "THEY HID THIS")
+Thumbnail text: 2-3 words MAX, ALL CAPS (e.g. "THEY HID THIS")
 
 ─── REPLY FORMAT ──────────────────────────────────────────────────────
 Reply with ONLY this JSON (no markdown, no explanation):
