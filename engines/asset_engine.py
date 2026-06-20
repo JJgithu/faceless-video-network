@@ -190,22 +190,84 @@ def generate_ambient_music(duration: float, run_dir: Path) -> Path:
     return music_path
 
 
+
+# ── Gemini AI Image Generation (Phase 2 — Pause-Bait) ─────────────────────
+
+def generate_gemini_image(prompt: str, run_dir: Path) -> Path | None:
+    """
+    Generate a single AI image using Google Imagen 3 via the Gemini API.
+    Used for the pause_bait niche to create highly detailed, visually striking
+    images that viewers need to pause and study.
+    Returns local path to the saved PNG, or None if generation fails.
+    """
+    try:
+        from google import genai
+        from google.genai import types as gtypes
+
+        client = genai.Client(api_key=config.GEMINI_API_KEY)
+        response = client.models.generate_images(
+            model="imagen-3.0-generate-001",
+            prompt=prompt,
+            config=gtypes.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio="9:16",         # portrait = perfect for Shorts
+                safety_filter_level="block_only_high",
+            ),
+        )
+        if not response.generated_images:
+            log.warning("Gemini Imagen returned no images")
+            return None
+
+        image_path = run_dir / "ai_background.png"
+        image_path.write_bytes(response.generated_images[0].image.image_bytes)
+        log.info(f"Gemini Imagen: AI image saved → {image_path.name}")
+        return image_path
+
+    except Exception as exc:
+        log.warning(f"Gemini Imagen failed: {exc} — falling back to Pexels")
+        return None
+
+
 # ── Public API ─────────────────────────────────────────────────────────────
 
 def gather_assets(topic: Topic, script: Script, run_dir: Path) -> Assets:
     """
     Download all assets required to build the video.
+    For pause_bait niche: generates an AI image instead of Pexels clips.
     Returns an Assets dict with local file paths.
     """
     log.info("═══ Asset Engine: gathering stock footage & music ═══")
 
-    # Use keywords from the topic + extra terms for better Pexels results
-    search_keywords = topic["keywords"] + [topic["topic"]]
+    niche = config.get_niche()
+    video_clips: list[Path] = []
+    ai_image: Path | None = None
 
-    video_clips = download_video_clips(search_keywords, run_dir)
+    # Phase 2: pause_bait uses a Gemini-generated image as the background
+    if niche.get("use_ai_image"):
+        image_prompt = (
+            f"Hyper-detailed, highly realistic scene perfect for a 'spot the difference' "
+            f"or visual challenge video. Topic: {topic['topic']}. "
+            f"Ultra-dense with small objects and fine details. "
+            f"Dark, moody, cinematic lighting. Portrait orientation. "
+            f"No text, no watermarks, photorealistic."
+        )
+        ai_image = generate_gemini_image(image_prompt, run_dir)
+        if ai_image:
+            log.info("Using Gemini AI image for pause_bait background")
+        else:
+            # Fallback to Pexels if Imagen fails
+            log.warning("Falling back to Pexels clips for pause_bait")
+
+    # Use Pexels for all other niches (or as fallback)
+    if not ai_image:
+        search_keywords = topic["keywords"] + [topic["topic"]]
+        video_clips = download_video_clips(search_keywords, run_dir)
 
     # Music length = narration + intro + outro + a little buffer
     music_duration = config.MAX_VIDEO_DURATION + 5
     music_file = generate_ambient_music(music_duration, run_dir)
 
-    return Assets(video_clips=video_clips, music_file=music_file)
+    result = Assets(video_clips=video_clips, music_file=music_file)
+    if ai_image:
+        result["ai_image"] = ai_image   # type: ignore[typeddict-unknown-key]
+    return result

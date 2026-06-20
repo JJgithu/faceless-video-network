@@ -137,24 +137,117 @@
     }
   ],
 
-  "riddles": [
+  "body_science": [
     {
-      "title": "Are You Smart Enough to Work at Google?",
-      "author": "William Poundstone",
-      "keywords": ["puzzle", "brain", "logic", "smart", "problem", "thinking", "challenge"],
-      "audible_url": "https://www.amazon.com/s?k=Are+You+Smart+Enough+Work+Google+Poundstone&tag=YOURTAG"
+      "title": "The Body: A Guide for Occupants",
+      "author": "Bill Bryson",
+      "keywords": ["human body", "biology", "anatomy", "cells", "organs", "science", "medical"],
+      "audible_url": "https://www.amazon.com/s?k=The+Body+Bill+Bryson&tag=YOURTAG"
     },
     {
-      "title": "The Art of Thinking Clearly",
-      "author": "Rolf Dobelli",
-      "keywords": ["thinking", "bias", "logic", "decision", "cognitive", "error", "clear"],
-      "audible_url": "https://www.amazon.com/s?k=The+Art+of+Thinking+Clearly+Rolf+Dobelli&tag=YOURTAG"
+      "title": "Why We Sleep",
+      "author": "Matthew Walker",
+      "keywords": ["sleep", "brain", "health", "biology", "rest", "dreams", "memory"],
+      "audible_url": "https://www.amazon.com/s?k=Why+We+Sleep+Matthew+Walker&tag=YOURTAG"
     },
     {
-      "title": "How to Think Like Sherlock Holmes",
-      "author": "Maria Konnikova",
-      "keywords": ["sherlock", "deduction", "logic", "observation", "detective", "puzzle", "reasoning"],
-      "audible_url": "https://www.amazon.com/s?k=Think+Like+Sherlock+Holmes+Maria+Konnikova&tag=YOURTAG"
+      "title": "Gulp: Adventures on the Alimentary Canal",
+      "author": "Mary Roach",
+      "keywords": ["digestion", "stomach", "gut", "eating", "biology", "food", "body"],
+      "audible_url": "https://www.amazon.com/s?k=Gulp+Mary+Roach+alimentary&tag=YOURTAG"
+    },
+    {
+      "title": "The Immortal Life of Henrietta Lacks",
+      "author": "Rebecca Skloot",
+      "keywords": ["cells", "cancer", "medical", "biology", "ethics", "immortal", "body"],
+      "audible_url": "https://www.amazon.com/s?k=Immortal+Life+Henrietta+Lacks+Skloot&tag=YOURTAG"
+    },
+    {
+      "title": "Stiff: The Curious Lives of Human Cadavers",
+      "author": "Mary Roach",
+      "keywords": ["death", "body", "cadaver", "forensic", "medical", "science", "anatomy"],
+      "audible_url": "https://www.amazon.com/s?k=Stiff+Mary+Roach+cadavers&tag=YOURTAG"
+    },
+    {
+      "title": "The Gene: An Intimate History",
+      "author": "Siddhartha Mukherjee",
+      "keywords": ["dna", "gene", "genetics", "heredity", "biology", "evolution", "science"],
+      "audible_url": "https://www.amazon.com/s?k=The+Gene+Siddhartha+Mukherjee&tag=YOURTAG"
+    }
+  ],
+
+  "alternate_history": [
+    {
+      "title": "The Man in the High Castle",
+      "author": "Philip K. Dick",
+      "keywords": ["alternate history", "world war", "nazi", "japan", "what if", "fiction", "dystopia"],
+      "audible_url": "https://www.amazon.com/s?k=Man+in+the+High+Castle+Philip+K+Dick&tag=YOURTAG"
+    },
+    {
+      "title": "1491: New Revelations of the Americas Before Columbus",
+      "author": "Charles C. Mann",
+      "keywords": ["americas", "native", "columbus", "history", "civilization", "hidden", "pre-columbian"],
+      "audible_url": "https://www.amazon.com/s?k=1491+Americas+Before+Columbus+Charles+Mann&tag=YOURTAG"
+    },
+    {
+      "title": "The Rise and Fall of the Third Reich",
+      "author": "William L. Shirer",
+      "keywords": ["nazi", "world war", "germany", "fascism", "history", "war", "dictator"],
+      "audible_url": "https://www.amazon.com/s?k=Rise+Fall+Third+Reich+Shirer&tag=YOURTAG"
+    },
+    {
+      "title": "Lies My Teacher Told Me",
+      "author": "James W. Loewen",
+      "keywords": ["history", "school", "hidden truth", "cover-up", "education", "lies", "government"],
+      "audible_url": "https://www.amazon.com/s?k=Lies+My+Teacher+Told+Me+Loewen&tag=YOURTAG"
+    },
+    {
+      "title": "The Guns of August",
+      "author": "Barbara W. Tuchman",
+      "keywords": ["world war", "1914", "military", "history", "catastrophe", "europe", "war"],
+      "audible_url": "https://www.amazon.com/s?k=Guns+of+August+Barbara+Tuchman&tag=YOURTAG"
+    }
+  ],
+
+  "animal_pov": [
+    {
+      "title": "Are We Smart Enough to Know How Smart Animals Are?",
+      "author": "Frans de Waal",
+      "keywords": ["animal", "intelligence", "cognition", "behavior", "instinct", "mind", "species"],
+      "audible_url": "https://www.amazon.com/s?k=Are+We+Smart+Enough+Animals+Frans+de+Waal&tag=YOURTAG"
+    },
+    {
+      "title": "The Hidden Life of Trees",
+      "author": "Peter Wohlleben",
+      "keywords": ["nature", "forest", "trees", "life", "survival", "ecosystem", "wild"],
+      "audible_url": "https://www.amazon.com/s?k=Hidden+Life+of+Trees+Peter+Wohlleben&tag=YOURTAG"
+    },
+    {
+      "title": "The Serengeti Rules",
+      "author": "Sean B. Carroll",
+      "keywords": ["wildlife", "predator", "ecosystem", "savanna", "nature", "survival", "animal"],
+      "audible_url": "https://www.amazon.com/s?k=Serengeti+Rules+Sean+Carroll&tag=YOURTAG"
+    },
+    {
+      "title": "Inside of a Dog: What Dogs See, Smell, and Know",
+      "author": "Alexandra Horowitz",
+      "keywords": ["dog", "animal", "senses", "smell", "perception", "pov", "cognition"],
+      "audible_url": "https://www.amazon.com/s?k=Inside+of+a+Dog+Alexandra+Horowitz&tag=YOURTAG"
+    },
+    {
+      "title": "The Soul of an Octopus",
+      "author": "Sy Montgomery",
+      "keywords": ["octopus", "intelligence", "marine", "creature", "consciousness", "ocean", "animal"],
+      "audible_url": "https://www.amazon.com/s?k=The+Soul+of+an+Octopus+Sy+Montgomery&tag=YOURTAG"
+    }
+  ],
+
+  "pause_bait": [
+    {
+      "title": "The Brain That Changes Itself",
+      "author": "Norman Doidge",
+      "keywords": ["brain", "mind", "perception", "illusion", "change", "neuroscience", "psychology"],
+      "audible_url": "https://www.amazon.com/s?k=The+Brain+That+Changes+Itself+Norman+Doidge&tag=YOURTAG"
     },
     {
       "title": "Thinking, Fast and Slow",
@@ -163,16 +256,16 @@
       "audible_url": "https://www.amazon.com/s?k=Thinking+Fast+and+Slow+Daniel+Kahneman&tag=YOURTAG"
     },
     {
-      "title": "The Puzzler",
-      "author": "A.J. Jacobs",
-      "keywords": ["puzzle", "crossword", "riddle", "game", "challenge", "solve", "competition"],
-      "audible_url": "https://www.amazon.com/s?k=The+Puzzler+AJ+Jacobs&tag=YOURTAG"
+      "title": "The Invisible Gorilla",
+      "author": "Christopher Chabris",
+      "keywords": ["illusion", "attention", "perception", "brain", "invisible", "awareness", "trick"],
+      "audible_url": "https://www.amazon.com/s?k=The+Invisible+Gorilla+Chabris&tag=YOURTAG"
     },
     {
-      "title": "Surely You're Joking, Mr. Feynman!",
-      "author": "Richard Feynman",
-      "keywords": ["genius", "science", "humor", "curious", "physics", "mind", "clever"],
-      "audible_url": "https://www.amazon.com/s?k=Surely+Youre+Joking+Mr+Feynman&tag=YOURTAG"
+      "title": "Predictably Irrational",
+      "author": "Dan Ariely",
+      "keywords": ["irrational", "decision", "brain", "behavior", "psychology", "bias", "choice"],
+      "audible_url": "https://www.amazon.com/s?k=Predictably+Irrational+Dan+Ariely&tag=YOURTAG"
     }
   ]
 }

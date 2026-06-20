@@ -163,22 +163,81 @@ NICHES: dict[str, dict] = {
         "affiliate_cta": "🐙 Explore the deep:",
     },
 
-    "riddles": {
-        "key": "riddles",
-        "display_name": "Mind Benders",
-        "emoji": "🧩",
+    "body_science": {
+        "key": "body_science",
+        "display_name": "Body Science",
+        "emoji": "🧬",
         "style": (
-            "playful and teasing puzzle master challenging viewers with clever riddles — "
-            "build suspense, pause for the answer, then reveal it dramatically"
+            "fast-paced medical toxicologist delivering shocking biological facts — "
+            "speak with clinical precision about exactly what happens to the human body, "
+            "second by second, with specific numbers and scientific details that make viewers gasp"
         ),
-        "pexels_keywords": ["puzzle brain", "thinking person", "question mark", "maze"],
-        "reddit_subs": ["riddles", "puzzles", "brainteasers", "trivia"],
+        "pexels_keywords": ["human anatomy", "medical microscope", "cell biology", "dna strand", "science laboratory"],
+        "reddit_subs": ["mildlyinteresting", "todayilearned", "science", "medicine"],
+        "wikipedia_unusual": True,
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_BODY", "pNInz6obpgDQGcFmaJgB"),
+        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_BODY", ""),
+        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_BODY", TIKTOK_ACCESS_TOKEN),
+        "affiliate_link": os.environ.get("AFFILIATE_BODY", ""),
+        "affiliate_cta": "🧬 Explore the science:",
+    },
+
+    "alternate_history": {
+        "key": "alternate_history",
+        "display_name": "Alternate History",
+        "emoji": "🕰️",
+        "style": (
+            "cinematic storyteller revealing lost history and impossible what-ifs — "
+            "speak like a historian who just found classified documents, mixing real facts "
+            "with chilling alternate scenarios that force viewers to question everything they know"
+        ),
+        "pexels_keywords": ["old photograph vintage", "historical war ruins", "ancient civilization dark", "abandoned building", "dramatic storm sky"],
+        "reddit_subs": ["AlternateHistory", "history", "todayilearned", "interestingasfuck"],
+        "wikipedia_unusual": True,
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_ALTHISTORY", "ErXwobaYiN019PkySvjV"),
+        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_ALTHISTORY", ""),
+        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_ALTHISTORY", TIKTOK_ACCESS_TOKEN),
+        "affiliate_link": os.environ.get("AFFILIATE_ALTHISTORY", ""),
+        "affiliate_cta": "📜 Uncover the truth:",
+    },
+
+    "animal_pov": {
+        "key": "animal_pov",
+        "display_name": "Animal POV",
+        "emoji": "🐾",
+        "style": (
+            "thrilling first-person animal narrator with a frantic inner monologue — "
+            "voice the animal's raw thoughts, fears, and survival instincts as if you ARE the creature. "
+            "Fast-paced, dramatic, and visceral — make the viewer feel every heartbeat"
+        ),
+        "pexels_keywords": ["macro insect closeup", "wildlife predator hunt", "bird eye view aerial", "spider web nature", "animal eye closeup"],
+        "reddit_subs": ["NatureIsFuckingLit", "AnimalsBeingBros", "interestingasfuck", "wildlifephotography"],
+        "wikipedia_unusual": True,
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_ANIMAL", "onwK4e9ZLuTAKqWW03F9"),
+        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_ANIMAL", ""),
+        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_ANIMAL", TIKTOK_ACCESS_TOKEN),
+        "affiliate_link": os.environ.get("AFFILIATE_ANIMAL", ""),
+        "affiliate_cta": "🐾 More wild POVs:",
+    },
+
+    "pause_bait": {
+        "key": "pause_bait",
+        "display_name": "Pause Bait",
+        "emoji": "👁️",
+        "style": (
+            "high-energy challenge host turning every video into a must-win game — "
+            "use urgent countdown language, impossible-sounding claims, and cliffhangers that force "
+            "viewers to pause, rewind, and flood the comments. Make it feel like a game show"
+        ),
+        "pexels_keywords": ["optical illusion", "crowd people hidden", "magic trick", "visual paradox", "brain puzzle light"],
+        "reddit_subs": ["mildlyinteresting", "Damnthatsinteresting", "interestingasfuck", "woahdude"],
         "wikipedia_unusual": False,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_RIDDLES", "onwK4e9ZLuTAKqWW03F9"),
-        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_RIDDLES", ""),
-        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_RIDDLES", TIKTOK_ACCESS_TOKEN),
-        "affiliate_link": os.environ.get("AFFILIATE_RIDDLES", ""),
-        "affiliate_cta": "🧠 Train your brain:",
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_PAUSE", "onwK4e9ZLuTAKqWW03F9"),
+        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_PAUSE", ""),
+        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_PAUSE", TIKTOK_ACCESS_TOKEN),
+        "affiliate_link": os.environ.get("AFFILIATE_PAUSE", ""),
+        "affiliate_cta": "🧠 Test your brain:",
+        "use_ai_image": True,    # Phase 2: use Gemini Imagen instead of Pexels
     },
 }
 

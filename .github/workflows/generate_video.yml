@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       niche:
-        description: 'Specific niche (leave as "auto_batch" to run both niches for this time of day)'
+        description: 'Specific niche (or "auto_batch" to rotate automatically)'
         required: false
         default: 'auto_batch'
         type: choice
@@ -27,7 +27,10 @@ on:
           - historical_mysteries
           - stoic_philosophy
           - deep_sea
-          - riddles
+          - body_science
+          - alternate_history
+          - animal_pov
+          - pause_bait
       dry_run:
         description: 'Generate video but skip upload (for testing)'
         required: false
@@ -114,29 +117,32 @@ jobs:
           fi
 
           # ── Determine which niches to run ──────────────────────────────────
+          # 7 niches rotate across the week — 4 per day (2 morning + 2 evening)
           # Priority: manual niche > repository_dispatch event > schedule cron
           MANUAL_NICHE="${{ github.event.inputs.niche }}"
           SCHEDULE="${{ github.event.schedule }}"
           DISPATCH_TYPE="${{ github.event.action }}"
 
+          # All 7 niches in rotation order
+          ALL_NICHES=(historical_mysteries stoic_philosophy deep_sea body_science alternate_history animal_pov pause_bait)
+          N=${#ALL_NICHES[@]}  # 7
+
+          # Day-of-year based offset (0-indexed). Over 7 days each niche gets ~4 runs.
+          DAY=$(( $(date -u +%j) - 1 ))   # 0-365
+          MORNING_A=${ALL_NICHES[$(( (DAY * 2)     % N ))]}
+          MORNING_B=${ALL_NICHES[$(( (DAY * 2 + 1) % N ))]}
+          EVENING_A=${ALL_NICHES[$(( (DAY * 2 + 2) % N ))]}
+          EVENING_B=${ALL_NICHES[$(( (DAY * 2 + 3) % N ))]}
+
           if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
-            # Single niche manual run
             NICHES="$MANUAL_NICHE"
-          elif [ "$DISPATCH_TYPE" = "morning_batch" ]; then
-            # Triggered by cron-job.org morning call
-            NICHES="historical_mysteries stoic_philosophy"
-          elif [ "$DISPATCH_TYPE" = "evening_batch" ]; then
-            # Triggered by cron-job.org evening call
-            NICHES="deep_sea riddles"
-          elif [ "$SCHEDULE" = "0 13 * * *" ]; then
-            # 9am ET GitHub scheduled morning batch
-            NICHES="historical_mysteries stoic_philosophy"
-          elif [ "$SCHEDULE" = "0 1 * * *" ]; then
-            # 9pm ET GitHub scheduled evening batch
-            NICHES="deep_sea riddles"
+          elif [ "$DISPATCH_TYPE" = "morning_batch" ] || [ "$SCHEDULE" = "0 13 * * *" ]; then
+            NICHES="$MORNING_A $MORNING_B"
+          elif [ "$DISPATCH_TYPE" = "evening_batch" ] || [ "$SCHEDULE" = "0 1 * * *" ]; then
+            NICHES="$EVENING_A $EVENING_B"
           else
-            # Manual auto_batch — run morning pair by default
-            NICHES="historical_mysteries stoic_philosophy"
+            # auto_batch manual run — use today's morning rotation
+            NICHES="$MORNING_A $MORNING_B"
           fi
 
           echo "► Niches to run: $NICHES"

@@ -88,6 +88,56 @@ def _pick_affiliate_book(topic: Topic, niche_key: str) -> dict | None:
         return None
 
 
+# ── Niche-specific script personalities ────────────────────────────────────
+# Each niche gets extra prompt instructions that override the generic structure
+# to match the viral format that performs best for that content type.
+
+NICHE_SCRIPT_EXTRAS: dict[str, str] = {
+
+    "body_science": """
+⚡ BODY SCIENCE FORMAT — Biological Countdown:
+  [HOOK]    Start with a shocking body-horror question the viewer MUST know the answer to.
+            Example: "Your stomach starts dissolving itself exactly 3 minutes after this."
+  [CONTENT] Use a COUNTDOWN FORMAT with precise time markers and scientific numbers:
+            "At 30 seconds: your blood pressure spikes 40%. At 2 minutes: your liver..."
+            Include real medical units (mg, mmHg, °C) and clinical terms.
+  [TWIST]   End with the counterintuitive medical verdict that flips their assumption.
+  ✅ Use fast, punchy medical language. Sound like a toxicologist, not a teacher.
+""",
+
+    "alternate_history": """
+⚡ ALTERNATE HISTORY FORMAT — Cinematic Reveal:
+  [HOOK]    Open with a real historical fact that sounds impossible or was hidden.
+            Example: "In 1908, the US government erased this city from every map."
+  [CONTENT] Stack 2-3 real facts that build toward an impossible "what if" scenario.
+            End each fact with "But what if..." to create the alternate timeline.
+  [TWIST]   Reveal the chilling alternate outcome — or the real cover-up explanation.
+  ✅ Mix real documented history with dark speculation. Make it cinematic and urgent.
+""",
+
+    "animal_pov": """
+⚡ ANIMAL POV FORMAT — First-Person Inner Monologue:
+  [HOOK]    Start IN the animal's head, mid-action, with raw survival instinct.
+            Example: "I can smell it. The shadow is 40 feet away. My heart is at 300 BPM."
+  [CONTENT] Stay in first person. Describe what the animal SENSES with scientific accuracy.
+            Use real animal biology facts woven into the inner monologue voice.
+  [TWIST]   End with the survival outcome — or the shocking biological fact about this species.
+  ✅ Write in PRESENT TENSE. Make it visceral, fast, and immersive. You ARE the animal.
+""",
+
+    "pause_bait": """
+⚡ PAUSE-BAIT FORMAT — The High-Stakes Challenge:
+  [HOOK]    Open with an impossible-sounding challenge that forces engagement.
+            Example: "99% of people cannot find the hidden number in this image in 5 seconds."
+  [CONTENT] Build urgency with a countdown. Give the viewer one clue that almost helps.
+            "The answer is hidden in plain sight. Most people look in the wrong place first."
+  [TWIST]   Reveal the answer — but make it feel earned. Add one more mind-bending fact.
+  ✅ Use challenge language: "Pause right now," "97% fail," "comment your answer below."
+  ✅ End the narration prompting viewers to comment — this signals the algorithm.
+""",
+}
+
+
 def generate_script(topic: Topic) -> Script:
     """
     Ask Gemini to write a complete, niche-specific video script.
@@ -95,6 +145,9 @@ def generate_script(topic: Topic) -> Script:
     """
     niche = config.get_niche()
     log.info(f"═══ Script Engine: [{niche['display_name']}] writing '{topic['topic']}' ═══")
+
+    # Niche-specific format override (biological countdown, POV monologue, etc.)
+    niche_extras = NICHE_SCRIPT_EXTRAS.get(config.ACTIVE_NICHE, "")
 
     affiliate_instruction = ""
     if niche.get("affiliate_link"):
@@ -119,24 +172,26 @@ OPENING HOOK: {topic['hook']}
 Narration length: 75–95 words MAX (spoken in ≈30–38 seconds)
 This is a SHORT-FORM video — every single word must earn its place.
 
+{niche_extras if niche_extras else """
 Structure (tight, punchy):
   [HOOK]    1–2 sentences — shock or question. No pleasantries.
   [CONTENT] 2–3 surprising facts. Short sentences only.
   [TWIST]   One final revelation.
   [CTA]     1 sentence: "Hit like and subscribe for more!"
+"""}
 
 Style rules:
-  ✦ Sentences under 12 words each
-  ✦ Audio-only friendly — no visual references
-  ✦ Match the channel's specific voice/tone
+  ✦ Sentences under 10 words each — short, punchy, unstoppable rhythm
+  ✦ Audio-only friendly — no visual references ("as you can see", "look at this")
+  ✦ Match the channel's specific voice/tone EXACTLY
   ✦ STRICT word limit: 75–95 words, count carefully
   ✦ The final CTA must ALWAYS be exactly: "Hit like and subscribe for more!"
 
 ─── METADATA REQUIREMENTS ──────────────────────────────────────────────
-Title: max 60 chars, 1 emoji, punchy hook
+Title: max 60 chars, 1 emoji, punchy hook — make it impossible NOT to click
 Description: 2 sentences, SEO keywords
 Hashtags: 14, must include #Shorts, #Viral, #{niche['display_name'].replace(' ','')}
-Thumbnail text: 2–3 words MAX, ALL CAPS (e.g. “THEY HID THIS”)
+Thumbnail text: 2–3 words MAX, ALL CAPS (e.g. "THEY HID THIS")
 
 ─── REPLY FORMAT ──────────────────────────────────────────────────────
 Reply with ONLY this JSON (no markdown, no explanation):
