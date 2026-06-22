@@ -233,6 +233,113 @@ def _gemini_topic_fallback(niche: dict, used_topics: set[str]) -> list[str]:
     return []
 
 
+# -- Hardcoded evergreen topic bank (last-resort when ALL APIs fail) ----------
+# These are high-quality, evergreen topics that never expire.
+# Gemini still picks the best one and writes the script -- we just skip scraping.
+
+TOPIC_BANK: dict[str, list[str]] = {
+    "historical_mysteries": [
+        "The Voynich Manuscript: The Book No One Can Read",
+        "The Lost Colony of Roanoke: 100 People Vanished",
+        "The Dyatlov Pass Incident: 9 Hikers, No Explanation",
+        "The Antikythera Mechanism: Ancient Computer from 100 BC",
+        "Oak Island: 200 Years of Searching for Hidden Treasure",
+        "The Dancing Plague of 1518: Town Danced Itself to Death",
+        "The Taos Hum: A Sound Only 2% of People Can Hear",
+        "The Wow! Signal: The Only Possible Alien Transmission Ever Recorded",
+        "The Baghdad Battery: Ancient Electricity from 250 BC",
+        "The Mary Celeste: Ghost Ship Found Perfectly Intact",
+    ],
+    "stoic_philosophy": [
+        "Marcus Aurelius Ruled an Empire While Fighting Depression",
+        "The Stoic Exercise That Cures Anxiety in 5 Minutes",
+        "What Seneca Said About Wasting Your Life That Still Hits Hard",
+        "The Dichotomy of Control: The Only Stoic Rule You Need",
+        "Epictetus Was a Slave Who Became the Most Powerful Man in Rome",
+        "The Negative Visualization Technique Billionaires Use Daily",
+        "Memento Mori: Why Thinking About Death Makes You Happier",
+        "The Stoic Morning Routine That Marcus Aurelius Used Every Day",
+        "Why the Stoics Said Anger Is Temporary Insanity",
+        "Amor Fati: The Philosophy of Loving Everything That Happens to You",
+    ],
+    "deep_sea": [
+        "The Mariana Trench Is Deeper Than Everest Is Tall",
+        "The Bloop: The Loudest Underwater Sound Ever Recorded",
+        "Zombie Worms That Dissolve Whale Bones With Acid",
+        "The Giant Squid Was Considered a Myth Until 2004",
+        "Barreleye Fish Has a Transparent Head and Rotating Eyes",
+        "The Immortal Jellyfish That Resets Its Own Biological Age",
+        "Anglerfish: The Female Literally Absorbs the Male's Body",
+        "The Black Seadevil Lives in Total Darkness at 3,000 Feet",
+        "Mantis Shrimp Can Punch With the Force of a Bullet",
+        "Deep Sea Octopus Holds Its Breath for 4.5 Years to Guard Eggs",
+    ],
+    "body_science": [
+        "Your Body Starts Digesting Itself Hours After You Die",
+        "The Human Eye Can Detect a Single Photon of Light",
+        "Your Stomach Gets a Completely New Lining Every 4 Days",
+        "You Produce Enough Saliva in a Lifetime to Fill Two Swimming Pools",
+        "The Appendix Is Not Useless -- It Reboots Your Gut Bacteria",
+        "Your Bones Are Constantly Being Dissolved and Rebuilt",
+        "The Human Body Contains More Bacterial Cells Than Human Cells",
+        "You Lose Half Your Taste Buds by the Time You Are 60",
+        "Your Brain Uses 20% of All Energy Despite Being 2% of Body Weight",
+        "A Single Sneeze Travels at 100 MPH and Contains 100,000 Germs",
+    ],
+    "alternate_history": [
+        "What If the Library of Alexandria Never Burned Down",
+        "The Nazi Bell: Hitler's Secret Time-Travel Weapon",
+        "What If the South Won the American Civil War",
+        "The Phantom Time Hypothesis: 300 Years of History That Never Happened",
+        "What If the Mongols Had Invaded Western Europe",
+        "Tesla's Death Ray: The Weapon the Government Seized and Hid",
+        "What If Rome Never Fell: Modern Civilization 1000 Years Ahead",
+        "The Tartaria Conspiracy: Was There a Global Empire We Were Never Told About",
+        "What If the Black Death Never Happened",
+        "The Great Mud Flood Theory: Cities Were Built Over an Older Civilization",
+    ],
+    "animal_pov": [
+        "POV: You Are an Ant Being Carried 1000 Times Your Body Weight",
+        "POV: You Are a Mantis Shrimp Seeing 16 Colors Humans Cannot See",
+        "POV: You Are a Dog Smelling a City From a Single Strand of Grass",
+        "POV: You Are a Monarch Butterfly Navigating 3000 Miles Using the Sun",
+        "POV: You Are a Bat Navigating Total Darkness at 60 MPH",
+        "POV: You Are a Pistol Shrimp Creating a Flash Hotter Than the Sun",
+        "POV: You Are a Tardigrade Surviving the Vacuum of Space",
+        "POV: You Are a Crow Solving a 5-Step Puzzle for Food",
+        "POV: You Are a Mimic Octopus Choosing Which Predator to Become",
+        "POV: You Are a Salmon Swimming Against a Waterfall to Get Home",
+    ],
+    "pause_bait": [
+        "99% of People Cannot Find the Hidden Animal in This Photo in 5 Seconds",
+        "This Optical Illusion Reveals Your Dominant Brain Type",
+        "Can You Spot the Difference Before the Timer Runs Out",
+        "Only 1 in 1000 People See This Color Illusion Correctly",
+        "This Image Has 12 Faces Hidden in It -- Most People Find 4",
+        "What Do You See First? It Reveals Your Personality",
+        "The Spinning Dancer: Does She Spin Left or Right",
+        "How Many Legs Does This Elephant Have -- Most People Get It Wrong",
+        "This Visual Illusion Bends Lines That Are Perfectly Straight",
+        "Stare at This for 30 Seconds Then Look at Your Hand",
+    ],
+}
+
+
+def _bank_fallback(niche_key: str, used_topics: set[str]) -> list[str]:
+    """Return unused topics from the hardcoded bank for this niche."""
+    bank = TOPIC_BANK.get(niche_key, [])
+    if not bank:
+        return []
+    used_titles = {t.split("::")[-1].lower() for t in used_topics}
+    fresh = [t for t in bank if t.lower() not in used_titles]
+    if not fresh:
+        # All bank topics used -- recycle them (better than crashing)
+        fresh = list(bank)
+    random.shuffle(fresh)
+    log.warning(f"Using hardcoded topic bank ({len(fresh)} fresh topics available)")
+    return fresh
+
+
 def get_trending_topic() -> Topic:
     """
     Main entry point. Gathers story candidates from all sources,
@@ -266,6 +373,10 @@ def get_trending_topic() -> Topic:
     # Gemini fallback — if all external sources failed, generate ideas directly
     if not candidates:
         candidates = _gemini_topic_fallback(niche, niche_used)
+
+    # Last-resort: hardcoded evergreen topic bank (survives Reddit 403 + Gemini 503)
+    if not candidates:
+        candidates = _bank_fallback(config.ACTIVE_NICHE, niche_used)
 
     if not candidates:
         raise RuntimeError(
