@@ -17,11 +17,11 @@ log = get_logger(__name__)
 _client = genai.Client(api_key=GEMINI_API_KEY)
 
 
-def ask(prompt: str, retries: int = 8, delay: float = 15.0) -> str:
+def ask(prompt: str, retries: int = 8, delay: float = 5.0) -> str:
     """
     Send a plain text prompt to Gemini and return the text response.
     Retries on transient errors with exponential back-off.
-    Default: 8 attempts, starting at 15s delay (15, 30, 45, 60... ~4 min total wait).
+    Default: 8 attempts, starting at 5s delay (5, 10, 15, 20... ~3 min total wait).
     """
     for attempt in range(1, retries + 1):
         try:
