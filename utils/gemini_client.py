@@ -44,10 +44,11 @@ def ask(prompt: str, retries: int = 20, delay: float = 5.0) -> str:
                 raise
 
 
-def ask_json(prompt: str, retries: int = 3) -> Any:
+def ask_json(prompt: str) -> Any:
     """
     Send a prompt that instructs Gemini to reply with JSON.
     Automatically strips markdown code fences and parses the result.
+    Uses ask()'s default of 20 retries — raises if all fail.
     Raises ValueError if the response cannot be parsed as JSON.
     """
     json_prompt = (
@@ -56,7 +57,7 @@ def ask_json(prompt: str, retries: int = 3) -> Any:
         "no code fences. Start your reply with { or [."
     )
 
-    raw = ask(json_prompt, retries=retries)
+    raw = ask(json_prompt)  # uses default retries=20
 
     # Strip optional ```json ... ``` wrappers
     cleaned = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
