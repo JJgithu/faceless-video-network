@@ -211,7 +211,34 @@ Reply with ONLY this JSON (no markdown, no explanation):
 }}
 """
 
-    script: Script = ask_json(prompt)
+    try:
+        script: Script = ask_json(prompt)
+    except Exception as exc:
+        log.warning(f"Gemini script generation failed after all retries ({exc}) -- using hardcoded fallback script")
+        # Pull a topic from the bank so the video always has real content
+        from engines.trend_engine import TOPIC_BANK
+        bank = TOPIC_BANK.get(config.ACTIVE_NICHE, [])
+        fallback_topic_title = bank[0] if bank else topic["topic"]
+        niche_tag = niche_hashtag
+        script = Script(
+            title=f"{fallback_topic_title[:57]}... {niche['emoji']}",
+            description=f"Did you know? {fallback_topic_title}. Follow for more mind-blowing facts every day.",
+            hashtags=["#Shorts", "#Viral", f"#{niche_tag}", "#Facts", "#DidYouKnow",
+                      "#Science", "#MindBlown", "#LearnOnTikTok", "#YouTube", "#FYP",
+                      "#Fascinating", "#WildFacts", "#Amazing", "#Unbelievable"],
+            narration=(
+                f"{fallback_topic_title}. "
+                f"This is one of those facts that completely changes how you see the world. "
+                f"Scientists have known about this for years, but almost nobody talks about it. "
+                f"The deeper you look, the stranger it gets. "
+                f"Hit like and subscribe for more!"
+            ),
+            thumbnail_text="WILD FACT",
+            hook=f"{fallback_topic_title}.",
+            cta="Hit like and subscribe for more!",
+            affiliate_line="",
+            affiliate_book="",
+        )
 
     # Always enforce the CTA — never let Gemini use a channel-specific phrase
     script["cta"] = "Hit like and subscribe for more!"
