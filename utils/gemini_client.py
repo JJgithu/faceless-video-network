@@ -17,12 +17,12 @@ log = get_logger(__name__)
 _client = genai.Client(api_key=GEMINI_API_KEY)
 
 
-def ask(prompt: str, retries: int = 20, delay: float = 5.0) -> str:
+def ask(prompt: str, retries: int = 30, delay: float = 5.0) -> str:
     """
     Send a plain text prompt to Gemini and return the text response.
     Retries on transient errors with exponential back-off.
-    Default: 20 attempts, starting at 5s delay (5, 10, 15, 20... ~17 min total wait).
-    If all 20 attempts fail, the exception is raised and no video is generated.
+    Default: 30 attempts, starting at 5s delay (5, 10, 15, 20... ~38 min total wait).
+    If all 30 attempts fail, the exception is raised and no video is generated.
     """
     for attempt in range(1, retries + 1):
         try:
