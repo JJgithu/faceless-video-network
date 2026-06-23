@@ -70,7 +70,8 @@ ELEVENLABS_STYLE         = 0.20
 ELEVENLABS_SPEAKER_BOOST = True
 
 # Fallback TTS if no ElevenLabs key is set
-FALLBACK_TTS_VOICE = "en-US-AriaNeural"
+FALLBACK_TTS_VOICE = "en-US-GuyNeural"        # male fallback when ElevenLabs quota runs out
+
 
 # ── Caption / subtitle settings ─────────────────────────────────────────────
 CAPTION_WORDS_PER_CUE   = 3    # words per caption bubble
