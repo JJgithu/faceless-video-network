@@ -194,31 +194,9 @@ Reply with ONE JSON object:
   "source": "wikipedia or reddit or google_trends"
 }}
 """
-    result: Topic | None = None
-    try:
-        result = ask_json(prompt)
-        log.info(f"Gemini selected: '{result['topic']}' (source: {result['source']})")
-        return result
-    except Exception as exc:
-        log.warning(f"Gemini ranker failed ({exc}) -- falling back to random pick from candidates")
-
-    # -- Fallback: pick a random unused candidate and build a minimal Topic ----
-    used_titles = {t.split("::")[-1].lower() for t in used_topics}
-    fresh = [c for c in candidates if c.lower() not in used_titles] or candidates
-    random.shuffle(fresh)
-    chosen = fresh[0]
-
-    # Build a basic Topic without Gemini (good enough to generate a script)
-    niche_keywords = niche.get("pexels_keywords", ["nature", "science", "world"])[:4]
-    fallback_topic: Topic = {
-        "topic": chosen[:80],
-        "angle": f"A fascinating and surprising look at: {chosen}",
-        "hook": f"You won't believe this: {chosen[:60]}",
-        "keywords": niche_keywords,
-        "source": "fallback_random",
-    }
-    log.warning(f"Random fallback topic selected: '{fallback_topic['topic']}'")
-    return fallback_topic
+    result: Topic = ask_json(prompt)
+    log.info(f"Gemini selected: '{result['topic']}' (source: {result['source']})")
+    return result
 
 
 def _gemini_topic_fallback(niche: dict, used_topics: set[str]) -> list[str]:
