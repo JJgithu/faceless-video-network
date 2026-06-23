@@ -75,7 +75,7 @@ FALLBACK_TTS_VOICE = "en-US-AriaNeural"
 # ── Caption / subtitle settings ─────────────────────────────────────────────
 CAPTION_WORDS_PER_CUE   = 3    # words per caption bubble
 CAPTION_FADE_MS         = 120  # ASS fade-in/out in milliseconds
-CAPTION_MARGIN_BOTTOM   = 90   # pixels from bottom
+CAPTION_MARGIN_BOTTOM   = 280  # pixels from bottom (higher = subtitles move up)
 
 # ── Asset settings ──────────────────────────────────────────────────────────
 PEXELS_CLIPS_TARGET     = 6    # number of clips to download
