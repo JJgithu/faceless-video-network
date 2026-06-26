@@ -1,9 +1,9 @@
 name: 🎬 Faceless Video Pipeline
 
 on:
-  # Two batches per day — each batch posts 2 videos (different niches)
-  # Batch 1: 9am ET  → Historical Mysteries + Stoic Philosophy
-  # Batch 2: 9pm ET  → Ocean Mysteries + Mind Benders
+  # Two batches per day — each batch posts 1 video (different niche)
+  # Batch 1: 9am ET  → 1 video
+  # Batch 2: 9pm ET  → 1 video
   schedule:
     - cron: '0 13 * * *'   # 9am ET  — Batch 1
     - cron: '0 1  * * *'   # 9pm ET  — Batch 2
@@ -44,7 +44,7 @@ jobs:
   generate-and-upload:
     name: "🎬 Daily Video Batch"
     runs-on: ubuntu-latest
-    timeout-minutes: 60   # two full videos need up to 60 min
+    timeout-minutes: 35   # one full video needs up to 35 min
 
     permissions:
       contents: write   # needed to commit topic history back to repo
@@ -117,7 +117,7 @@ jobs:
           fi
 
           # ── Determine which niches to run ──────────────────────────────────
-          # 7 niches rotate across the week — 4 per day (2 morning + 2 evening)
+          # 7 niches rotate across the week — 2 per day (1 morning + 1 evening)
           # Priority: manual niche > repository_dispatch event > schedule cron
           MANUAL_NICHE="${{ github.event.inputs.niche }}"
           SCHEDULE="${{ github.event.schedule }}"
@@ -127,22 +127,20 @@ jobs:
           ALL_NICHES=(historical_mysteries stoic_philosophy deep_sea body_science alternate_history animal_pov pause_bait)
           N=${#ALL_NICHES[@]}  # 7
 
-          # Day-of-year based offset (0-indexed). Over 7 days each niche gets ~4 runs.
+          # Day-of-year based offset (0-indexed). Each niche runs roughly once per week.
           DAY=$(( $(date -u +%j) - 1 ))   # 0-365
           MORNING_A=${ALL_NICHES[$(( (DAY * 2)     % N ))]}
-          MORNING_B=${ALL_NICHES[$(( (DAY * 2 + 1) % N ))]}
-          EVENING_A=${ALL_NICHES[$(( (DAY * 2 + 2) % N ))]}
-          EVENING_B=${ALL_NICHES[$(( (DAY * 2 + 3) % N ))]}
+          EVENING_A=${ALL_NICHES[$(( (DAY * 2 + 1) % N ))]}
 
           if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
             NICHES="$MANUAL_NICHE"
           elif [ "$DISPATCH_TYPE" = "morning_batch" ] || [ "$SCHEDULE" = "0 13 * * *" ]; then
-            NICHES="$MORNING_A $MORNING_B"
+            NICHES="$MORNING_A"
           elif [ "$DISPATCH_TYPE" = "evening_batch" ] || [ "$SCHEDULE" = "0 1 * * *" ]; then
-            NICHES="$EVENING_A $EVENING_B"
+            NICHES="$EVENING_A"
           else
-            # auto_batch manual run — use today's morning rotation
-            NICHES="$MORNING_A $MORNING_B"
+            # auto_batch manual run — use today's morning niche
+            NICHES="$MORNING_A"
           fi
 
           echo "► Niches to run: $NICHES"
