@@ -105,18 +105,22 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 def _build_simple_ass(narration: str, duration: float) -> str:
     """
     Fallback: build ASS captions by evenly distributing words across the audio
-    duration when we have no word-level timing (edge-tts fallback path).
+    duration when we have no word-level timing (e.g. ElevenLabs standard convert).
+    Starts at CAPTION_OFFSET_MS to compensate for the brief silence ElevenLabs
+    adds before speech begins, so captions don't appear before the voice.
     """
+    OFFSET_MS = 300   # ms before first caption appears (voice latency compensation)
     words = narration.upper().split()
     if not words:
         return ""
 
-    ms_per_word = (duration * 1000) / len(words)
+    effective_ms = max((duration * 1000) - OFFSET_MS, 1)
+    ms_per_word = effective_ms / len(words)
     timings = [
         {
             "word": w,
-            "start_ms": int(i * ms_per_word),
-            "end_ms": int((i + 1) * ms_per_word),
+            "start_ms": int(OFFSET_MS + i * ms_per_word),
+            "end_ms":   int(OFFSET_MS + (i + 1) * ms_per_word),
         }
         for i, w in enumerate(words)
     ]
@@ -132,34 +136,98 @@ def _elevenlabs_generate(
 ) -> list[dict]:
     """
     Generate voice via ElevenLabs API.
-    Returns empty list (captions will use evenly-spaced fallback).
-    Word-level timestamps are not used because the API changed —
-    evenly-spaced captions look great anyway.
+    Tries convert_with_timestamps first (gives real word timings for subtitle sync).
+    Falls back to standard convert if timestamps endpoint fails.
+    Raises on quota-exceeded or auth errors — no silent fallback.
     """
     from elevenlabs.client import ElevenLabs
     from elevenlabs import VoiceSettings
+    import base64
 
     client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
+    vs = VoiceSettings(
+        stability=config.ELEVENLABS_STABILITY,
+        similarity_boost=config.ELEVENLABS_SIMILARITY,
+        style=config.ELEVENLABS_STYLE,
+        use_speaker_boost=config.ELEVENLABS_SPEAKER_BOOST,
+    )
 
+    # ── Try with timestamps (real word-level timing for subtitle sync) ──────
+    try:
+        resp = client.text_to_speech.convert_with_timestamps(
+            voice_id=voice_id,
+            text=text,
+            model_id=config.ELEVENLABS_MODEL,
+            voice_settings=vs,
+        )
+        audio_bytes = base64.b64decode(resp.audio_base64)
+        audio_path.write_bytes(audio_bytes)
+
+        alignment = getattr(resp, "alignment", None)
+        if alignment and getattr(alignment, "characters", None):
+            word_timings = _chars_to_word_timings(
+                alignment.characters,
+                alignment.character_start_times_seconds,
+                alignment.character_end_times_seconds,
+            )
+            log.info(f"ElevenLabs: audio + {len(word_timings)} word timings (timestamp API)")
+            return word_timings
+
+        log.info("ElevenLabs: audio written (timestamp API returned no alignment)")
+        return []
+
+    except Exception as ts_exc:
+        log.warning(f"ElevenLabs with_timestamps failed ({ts_exc}), trying standard convert")
+
+    # ── Fallback: standard streaming convert ────────────────────────────────
     audio_generator = client.text_to_speech.convert(
         voice_id=voice_id,
         text=text,
         model_id=config.ELEVENLABS_MODEL,
-        voice_settings=VoiceSettings(
-            stability=config.ELEVENLABS_STABILITY,
-            similarity_boost=config.ELEVENLABS_SIMILARITY,
-            style=config.ELEVENLABS_STYLE,
-            use_speaker_boost=config.ELEVENLABS_SPEAKER_BOOST,
-        ),
+        voice_settings=vs,
     )
-
     with open(audio_path, "wb") as fh:
         for chunk in audio_generator:
             if chunk:
                 fh.write(chunk)
 
-    log.info(f"ElevenLabs: audio written → {audio_path.name}")
-    return []   # no word timings; captions use evenly-spaced fallback
+    log.info(f"ElevenLabs: audio written (standard convert, no word timings)")
+    return []
+
+
+def _chars_to_word_timings(
+    chars: list[str],
+    starts: list[float],
+    ends: list[float],
+) -> list[dict]:
+    """Convert ElevenLabs character-level alignment to word-level timings."""
+    word_timings: list[dict] = []
+    current_word = ""
+    word_start_s: float | None = None
+
+    for ch, t_start, t_end in zip(chars, starts, ends):
+        if ch in (" ", "\n", "\t"):
+            if current_word:
+                word_timings.append({
+                    "word": current_word,
+                    "start_ms": int(word_start_s * 1000),
+                    "end_ms":   int(t_start * 1000),
+                })
+            current_word = ""
+            word_start_s = None
+        else:
+            if not current_word:
+                word_start_s = t_start
+            current_word += ch
+
+    if current_word and word_start_s is not None:
+        word_timings.append({
+            "word": current_word,
+            "start_ms": int(word_start_s * 1000),
+            "end_ms":   int(ends[-1] * 1000) if ends else int(word_start_s * 1000) + 500,
+        })
+
+    return word_timings
 
 
 # ── Edge TTS fallback ──────────────────────────────────────────────────────
@@ -204,22 +272,24 @@ def generate_voiceover(narration: str, run_dir: Path) -> VoiceResult:
     word_timings: list[dict] = []
     engine_used = "edge_tts"
 
-    # ── Try ElevenLabs ─────────────────────────────────────────────────────
-    if config.ELEVENLABS_API_KEY:
-        try:
-            # Use 'or' so empty string from unset GitHub Secret also falls back to default
-            voice_id = niche.get("elevenlabs_voice_id") or "pNInz6obpgDQGcFmaJgB"
-            log.info(f"Using ElevenLabs voice: {voice_id}")
-            word_timings = _elevenlabs_generate(clean_text, voice_id, audio_path)
-            engine_used = "elevenlabs"
-        except Exception as exc:
-            log.warning(f"ElevenLabs failed ({exc}), falling back to Edge TTS")
+    # ── Require ElevenLabs (quality policy — no fallback TTS) ──────────────
+    if not config.ELEVENLABS_API_KEY:
+        raise RuntimeError(
+            "ElevenLabs API key not configured. "
+            "Set ELEVENLABS_API_KEY in GitHub Secrets to enable video production."
+        )
 
-    # ── Fallback: Edge TTS ─────────────────────────────────────────────────
-    if not audio_path.exists() or audio_path.stat().st_size < 1000:
-        log.info(f"Using Edge TTS voice: {config.FALLBACK_TTS_VOICE}")
-        word_timings = asyncio.run(_edge_tts_generate(clean_text, audio_path))
-        engine_used = "edge_tts"
+    voice_id = niche.get("elevenlabs_voice_id") or "pNInz6obpgDQGcFmaJgB"
+    log.info(f"Using ElevenLabs voice: {voice_id}")
+    try:
+        word_timings = _elevenlabs_generate(clean_text, voice_id, audio_path)
+        engine_used = "elevenlabs"
+    except Exception as exc:
+        # Quota exceeded, auth error, etc. — abort immediately, no fallback
+        raise RuntimeError(
+            f"ElevenLabs failed: {exc}\n"
+            "Video production aborted (quality policy: ElevenLabs voice required)."
+        ) from exc
 
     duration = _get_audio_duration(audio_path)
 

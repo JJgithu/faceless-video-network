@@ -284,11 +284,13 @@ def _mix_audio(
     silent_video: Path,
     narration: Path,
     music: Path,
+    sfx: Path,
     total_duration: float,
     out: Path,
 ) -> None:
     """
-    Combine the silent video with narration (100%) + background music (quiet).
+    Combine the silent video with narration (100%) + background music (quiet)
+    + hook SFX at t=0.
     Uses tpad to clone the last video frame if the video stream is shorter than
     the audio, so there is never a black screen gap.
     """
@@ -298,14 +300,20 @@ def _mix_audio(
             "-i", str(silent_video),
             "-i", str(narration),
             "-stream_loop", "-1", "-i", str(music),
+            "-i", str(sfx),
             "-filter_complex",
             # Clone last video frame for up to 5s so video never ends before audio
             f"[0:v]tpad=stop_mode=clone:stop_duration=5[vpad];"
-            # Pad narration with silence then mix with music for full duration
+            # Hook SFX: pad to full duration then mix at 80% into narration
+            f"[3:a]volume=0.8,apad=whole_dur={total_duration:.3f}[sfx_padded];"
+            # Narration: pad with silence to full duration
             f"[1:a]volume=1.0,apad=whole_dur={total_duration:.3f}[narr];"
+            # Mix narration + SFX first
+            f"[narr][sfx_padded]amix=inputs=2:duration=longest:dropout_transition=0[narr_sfx];"
+            # Then mix with background music
             f"[2:a]volume={music_vol},atrim=0:{total_duration:.3f},"
             f"asetpts=PTS-STARTPTS[mus];"
-            f"[narr][mus]amix=inputs=2:duration=longest:dropout_transition=1[audio]",
+            f"[narr_sfx][mus]amix=inputs=2:duration=longest:dropout_transition=1[audio]",
             "-map", "[vpad]",
             "-map", "[audio]",
             "-t", f"{total_duration:.3f}",
@@ -316,7 +324,6 @@ def _mix_audio(
         ],
         label="audio-mix",
     )
-
 
 
 # ── Caption burn-in ────────────────────────────────────────────────────────
