@@ -10,6 +10,9 @@ The system supports MULTIPLE NICHE CHANNELS. Each niche has its own:
 
 The active niche is chosen via the NICHE environment variable,
 making GitHub Actions matrix jobs trivial.
+
+Active niches: historical_mysteries, deep_sea, body_science, alternate_history
+Removed:       stoic_philosophy, animal_pov, pause_bait
 """
 
 import os
@@ -55,31 +58,42 @@ GEMINI_MODEL = "gemini-2.5-flash"
 VIDEO_WIDTH        = 1080
 VIDEO_HEIGHT       = 1920
 VIDEO_FPS          = 30
-MAX_VIDEO_DURATION = 55    # seconds — YouTube Shorts max is 60s
+MAX_VIDEO_DURATION = 45    # seconds — keep videos tight and engaging
 MIN_VIDEO_DURATION = 20
-INTRO_DURATION     = 2.5   # title card
+INTRO_DURATION     = 0.0   # NO intro card — video starts instantly in action
 OUTRO_DURATION     = 3.0   # CTA card
 MUSIC_VOLUME       = 0.10  # background music mix level
 
+# ── Visual pacing ──────────────────────────────────────────────────────────
+# Visuals MUST change every 2–3 seconds to maintain constant dopamine
+CLIP_MAX_DURATION  = 2.5   # max seconds per clip before cutting to next
+CLIP_FADE_DURATION = 0.08  # barely-perceptible cut (no slow cinematic fades)
+
+# ── Hook SFX (frame 1 pattern interrupt) ───────────────────────────────────
+HOOK_SFX_TYPE      = "boom_whoosh"  # jarring combo: heavy boom + whoosh
+HOOK_SFX_VOLUME    = 0.85           # loud enough to wake the viewer up
+SFX_VOLUME         = 0.65           # inline SFX mix level (under voice)
+
 # ── ElevenLabs ─────────────────────────────────────────────────────────────
 # Model: eleven_turbo_v2_5 is fast + high-quality, perfect for automation
-ELEVENLABS_MODEL   = "eleven_turbo_v2_5"
+ELEVENLABS_MODEL         = "eleven_turbo_v2_5"
 ELEVENLABS_STABILITY     = 0.50
 ELEVENLABS_SIMILARITY    = 0.80
 ELEVENLABS_STYLE         = 0.20
 ELEVENLABS_SPEAKER_BOOST = True
 
-# Fallback TTS if no ElevenLabs key is set
-FALLBACK_TTS_VOICE = "en-US-GuyNeural"        # male fallback when ElevenLabs quota runs out
-
-
-# ── Caption / subtitle settings ─────────────────────────────────────────────
-CAPTION_WORDS_PER_CUE   = 3    # words per caption bubble
-CAPTION_FADE_MS         = 120  # ASS fade-in/out in milliseconds
-CAPTION_MARGIN_BOTTOM   = 280  # pixels from bottom (higher = subtitles move up)
+# ── Caption / subtitle settings (Hormozi style) ─────────────────────────────
+# 1–2 words per cue, center screen, massive bold font — locks eyes to screen
+CAPTION_WORDS_PER_CUE   = 2      # 1–2 words per pop-in
+CAPTION_FADE_MS         = 80     # fast snap-in (not a slow fade)
+CAPTION_FONT_SIZE       = 88     # large and dominant
+CAPTION_MARGIN_BOTTOM   = 0      # not used — captions are center-screen (Alignment=5)
+CAPTION_PRIMARY_COLOR   = "&H0000FFFF"   # bright yellow (ASS BGR format)
+CAPTION_OUTLINE_COLOR   = "&H00000000"   # black outline
+CAPTION_BACK_COLOR      = "&HAA000000"   # semi-transparent dark shadow box
 
 # ── Asset settings ──────────────────────────────────────────────────────────
-PEXELS_CLIPS_TARGET     = 6    # number of clips to download
+PEXELS_CLIPS_TARGET     = 10   # more clips = more variety for fast cutting
 PEXELS_MAX_CLIP_DURATION = 20  # cap clips at 20s before trimming
 
 # ── Topic history ───────────────────────────────────────────────────────────
@@ -99,7 +113,11 @@ TIKTOK_DISABLE_STITCH  = False
 
 # ──────────────────────────────────────────────────────────────────────────
 # NICHE CHANNEL REGISTRY
-# Add / remove niches here. Each niche maps to a distinct channel identity.
+# Four active niches — all share the "dark curiosity" mega-theme:
+#   historical mysteries + alternate history + deep sea + bizarre body science
+#
+# Each niche keeps its own channel ID + voice for brand consistency,
+# but all four draw from the same universe of content and style.
 # ──────────────────────────────────────────────────────────────────────────
 NICHES: dict[str, dict] = {
 
@@ -107,16 +125,24 @@ NICHES: dict[str, dict] = {
         "key": "historical_mysteries",
         "display_name": "Historical Mysteries",
         "emoji": "🏛️",
-        # Script tone given to Gemini
+        # Combined mega-style: history + alternate history + body horror + deep sea
         "style": (
-            "mysterious and dramatic narrator uncovering hidden historical truths — "
-            "speak like a documentary host who just found a shocking secret"
+            "cinematic historian and investigative journalist uncovering impossible truths — "
+            "mix verified shocking historical facts with dark alternate scenarios, bizarre "
+            "biological facts about people in history, and deep-time discoveries that rewrite "
+            "what we thought we knew. Sound like a documentary host who just found classified documents. "
+            "Every sentence must be a revelation."
         ),
-        # Pexels search terms for b-roll footage
-        "pexels_keywords": ["ancient ruins", "history documentary", "archaeology", "medieval castle"],
-        # Reddit subs to mine for story ideas
-        "reddit_subs": ["history", "AskHistorians", "mildlyinteresting", "todayilearned"],
-        # Wikipedia categories to scrape for weird facts
+        # Broad keyword pool covering all four domains
+        "pexels_keywords": [
+            "ancient ruins dramatic", "history documentary dark", "archaeology discovery",
+            "medieval castle dramatic", "old photograph vintage", "historical war ruins",
+            "ancient civilization dark", "abandoned building",
+        ],
+        "reddit_subs": [
+            "history", "AskHistorians", "mildlyinteresting", "todayilearned",
+            "AlternateHistory", "interestingasfuck", "science",
+        ],
         "wikipedia_unusual": True,
         # ElevenLabs voice — deep, authoritative male narrator
         "elevenlabs_voice_id": os.environ.get("EL_VOICE_HISTORY", "pNInz6obpgDQGcFmaJgB"),
@@ -126,24 +152,8 @@ NICHES: dict[str, dict] = {
         # Affiliate link appended to every description
         "affiliate_link": os.environ.get("AFFILIATE_HISTORY", ""),
         "affiliate_cta": "📚 Dive deeper — explore history:",
-    },
-
-    "stoic_philosophy": {
-        "key": "stoic_philosophy",
-        "display_name": "Stoic Wisdom",
-        "emoji": "🧘",
-        "style": (
-            "calm, measured philosopher distilling timeless Stoic wisdom — "
-            "speak slowly and deliberately, like Marcus Aurelius himself"
-        ),
-        "pexels_keywords": ["meditation", "nature sunrise", "philosophy calm", "mountain landscape"],
-        "reddit_subs": ["Stoicism", "philosophy", "Meditation", "quotes"],
-        "wikipedia_unusual": False,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_STOIC", "EXAVITQu4vr4xnSDxMaL"),
-        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_STOIC", ""),
-        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_STOIC", TIKTOK_ACCESS_TOKEN),
-        "affiliate_link": os.environ.get("AFFILIATE_STOIC", ""),
-        "affiliate_cta": "📖 Read more Stoic wisdom:",
+        # SFX palette for this niche
+        "sfx_palette": ["boom", "thunder", "reveal", "deep_rumble"],
     },
 
     "deep_sea": {
@@ -151,17 +161,30 @@ NICHES: dict[str, dict] = {
         "display_name": "Ocean Mysteries",
         "emoji": "🌊",
         "style": (
-            "awe-struck marine biologist revealing terrifying and beautiful deep-sea secrets — "
-            "make every fact sound like it belongs in a horror-meets-nature documentary"
+            "awe-struck deep-sea researcher revealing the most terrifying and beautiful "
+            "secrets from the ocean's abyss — combine real marine biology with alternate "
+            "history of ocean exploration, bizarre body science of pressure and survival, "
+            "and mysteries that have never been explained. "
+            "Make every fact sound like it belongs in a horror-meets-nature documentary. "
+            "Be specific: use real depths in feet, real species names, real biology. "
+            "Start mid-sentence with the most disturbing fact first."
         ),
-        "pexels_keywords": ["ocean underwater", "deep sea fish", "coral reef", "marine biology"],
-        "reddit_subs": ["marinebiology", "NatureIsFuckingLit", "science", "interestingasfuck"],
+        "pexels_keywords": [
+            "ocean underwater dark", "deep sea creature", "coral reef dramatic",
+            "marine biology abyss", "underwater cave", "bioluminescent ocean",
+            "submarine deep water", "ocean storm dramatic",
+        ],
+        "reddit_subs": [
+            "marinebiology", "NatureIsFuckingLit", "science", "interestingasfuck",
+            "todayilearned", "mildlyinteresting",
+        ],
         "wikipedia_unusual": True,
         "elevenlabs_voice_id": os.environ.get("EL_VOICE_OCEAN", "21m00Tcm4TlvDq8ikWAM"),
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_OCEAN", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_OCEAN", TIKTOK_ACCESS_TOKEN),
         "affiliate_link": os.environ.get("AFFILIATE_OCEAN", ""),
         "affiliate_cta": "🐙 Explore the deep:",
+        "sfx_palette": ["water_drop", "deep_rumble", "creepy_crawl", "boom"],
     },
 
     "body_science": {
@@ -169,18 +192,29 @@ NICHES: dict[str, dict] = {
         "display_name": "Body Science",
         "emoji": "🧬",
         "style": (
-            "fast-paced medical toxicologist delivering shocking biological facts — "
-            "speak with clinical precision about exactly what happens to the human body, "
-            "second by second, with specific numbers and scientific details that make viewers gasp"
+            "fast-paced medical toxicologist and survival specialist delivering shocking "
+            "biological facts — combine extreme medical mysteries, bizarre survival scenarios, "
+            "deep-sea pressure effects on the human body, and historical cases of impossible "
+            "human endurance. Speak with clinical precision: use exact numbers (mg, mmHg, °C, BPM). "
+            "Use a countdown or sequence format to build dread second-by-second. "
+            "Hook must name the exact horrifying thing that happens to the body — no buildup."
         ),
-        "pexels_keywords": ["human anatomy", "medical microscope", "cell biology", "dna strand", "science laboratory"],
-        "reddit_subs": ["mildlyinteresting", "todayilearned", "science", "medicine"],
+        "pexels_keywords": [
+            "human anatomy dramatic", "medical emergency", "cell biology microscope",
+            "dna strand science", "science laboratory", "x-ray scan dramatic",
+            "heartbeat monitor", "survival extreme cold",
+        ],
+        "reddit_subs": [
+            "mildlyinteresting", "todayilearned", "science", "medicine",
+            "interestingasfuck", "NatureIsFuckingLit",
+        ],
         "wikipedia_unusual": True,
         "elevenlabs_voice_id": os.environ.get("EL_VOICE_BODY", "pNInz6obpgDQGcFmaJgB"),
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_BODY", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_BODY", TIKTOK_ACCESS_TOKEN),
         "affiliate_link": os.environ.get("AFFILIATE_BODY", ""),
         "affiliate_cta": "🧬 Explore the science:",
+        "sfx_palette": ["heartbeat", "creepy_crawl", "boom", "reveal"],
     },
 
     "alternate_history": {
@@ -188,57 +222,30 @@ NICHES: dict[str, dict] = {
         "display_name": "Alternate History",
         "emoji": "🕰️",
         "style": (
-            "cinematic storyteller revealing lost history and impossible what-ifs — "
-            "speak like a historian who just found classified documents, mixing real facts "
-            "with chilling alternate scenarios that force viewers to question everything they know"
+            "cinematic storyteller and investigative journalist revealing lost history, "
+            "cover-ups, and impossible what-ifs — mix verified shocking historical facts "
+            "with chilling alternate scenarios, bizarre discoveries that were buried, "
+            "and deep-sea or biological evidence that changes everything. "
+            "Sound like a historian who just found classified documents. "
+            "Open with a real historical fact that sounds impossible. "
+            "Every sentence forces the viewer to question what they were taught."
         ),
-        "pexels_keywords": ["old photograph vintage", "historical war ruins", "ancient civilization dark", "abandoned building", "dramatic storm sky"],
-        "reddit_subs": ["AlternateHistory", "history", "todayilearned", "interestingasfuck"],
+        "pexels_keywords": [
+            "old photograph vintage dramatic", "historical war ruins", "ancient civilization dark",
+            "abandoned building dramatic", "dramatic storm sky", "classified document",
+            "conspiracy board", "underground bunker",
+        ],
+        "reddit_subs": [
+            "AlternateHistory", "history", "todayilearned", "interestingasfuck",
+            "mildlyinteresting", "AskHistorians",
+        ],
         "wikipedia_unusual": True,
         "elevenlabs_voice_id": os.environ.get("EL_VOICE_ALTHISTORY", "ErXwobaYiN019PkySvjV"),
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_ALTHISTORY", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_ALTHISTORY", TIKTOK_ACCESS_TOKEN),
         "affiliate_link": os.environ.get("AFFILIATE_ALTHISTORY", ""),
         "affiliate_cta": "📜 Uncover the truth:",
-    },
-
-    "animal_pov": {
-        "key": "animal_pov",
-        "display_name": "Animal POV",
-        "emoji": "🐾",
-        "style": (
-            "thrilling first-person animal narrator with a frantic inner monologue — "
-            "voice the animal's raw thoughts, fears, and survival instincts as if you ARE the creature. "
-            "Fast-paced, dramatic, and visceral — make the viewer feel every heartbeat"
-        ),
-        "pexels_keywords": ["macro insect closeup", "wildlife predator hunt", "bird eye view aerial", "spider web nature", "animal eye closeup"],
-        "reddit_subs": ["NatureIsFuckingLit", "AnimalsBeingBros", "interestingasfuck", "wildlifephotography"],
-        "wikipedia_unusual": True,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_ANIMAL", "onwK4e9ZLuTAKqWW03F9"),
-        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_ANIMAL", ""),
-        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_ANIMAL", TIKTOK_ACCESS_TOKEN),
-        "affiliate_link": os.environ.get("AFFILIATE_ANIMAL", ""),
-        "affiliate_cta": "🐾 More wild POVs:",
-    },
-
-    "pause_bait": {
-        "key": "pause_bait",
-        "display_name": "Pause Bait",
-        "emoji": "👁️",
-        "style": (
-            "high-energy challenge host turning every video into a must-win game — "
-            "use urgent countdown language, impossible-sounding claims, and cliffhangers that force "
-            "viewers to pause, rewind, and flood the comments. Make it feel like a game show"
-        ),
-        "pexels_keywords": ["optical illusion", "crowd people hidden", "magic trick", "visual paradox", "brain puzzle light"],
-        "reddit_subs": ["mildlyinteresting", "Damnthatsinteresting", "interestingasfuck", "woahdude"],
-        "wikipedia_unusual": False,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_PAUSE", "onwK4e9ZLuTAKqWW03F9"),
-        "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_PAUSE", ""),
-        "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_PAUSE", TIKTOK_ACCESS_TOKEN),
-        "affiliate_link": os.environ.get("AFFILIATE_PAUSE", ""),
-        "affiliate_cta": "🧠 Test your brain:",
-        "use_ai_image": True,    # Phase 2: use Gemini Imagen instead of Pexels
+        "sfx_palette": ["thunder", "boom", "reveal", "deep_rumble"],
     },
 }
 

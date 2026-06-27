@@ -2,10 +2,17 @@
 engines/script_engine.py
 ─────────────────────────────────────────────────────────────────────────────
 The Scriptwriter Agent — uses Gemini 2.5 Flash to write a complete,
-publish-ready 50-second vertical video script tailored to the active niche.
+publish-ready 45-second vertical video script tailored to the active niche.
+
+Hook rules (strictly enforced):
+  ✅ Starts mid-sentence with the most shocking/horrifying claim
+  ✅ No "Did you know", "Welcome", "Have you ever", "Today we"
+  ✅ First sentence ≤ 12 words, already in the middle of the action
+  ✅ AI voice starts speaking on frame 1 — no dead air
 
 Output is structured for all downstream engines:
   - Narration (spoken by ElevenLabs)
+  - SFX tags (sentence-level SFX assignments for the audio mixer)
   - Title, description, hashtags (for YouTube & TikTok)
   - Thumbnail text, hook sentence, CTA
   - Affiliate link placement
@@ -26,6 +33,11 @@ log = get_logger(__name__)
 _BOOKS_FILE = Path(__file__).parent.parent / "data" / "affiliate_books.json"
 
 
+class SfxTag(TypedDict):
+    sentence_index: int   # 0-based index of the sentence in the narration
+    sfx_type: str         # matches an _SFX_GENERATORS key in asset_engine
+
+
 class Script(TypedDict):
     title: str            # Platform title ≤ 100 chars, includes emoji
     description: str      # Full SEO description with affiliate link
@@ -36,6 +48,35 @@ class Script(TypedDict):
     cta: str              # Final CTA sentence
     affiliate_line: str   # Formatted affiliate line for description
     affiliate_book: str   # Book title selected for this video
+    sfx_tags: list[SfxTag]  # Sentence-level SFX assignments
+
+
+# ── Banned hook openers ─────────────────────────────────────────────────────
+BANNED_OPENERS = [
+    "did you know",
+    "welcome",
+    "have you ever",
+    "today we",
+    "today, we",
+    "in this video",
+    "hey guys",
+    "hello",
+    "greetings",
+    "let me tell",
+    "let's talk",
+    "let us talk",
+    "i'm going to",
+    "i want to",
+    "we're going to",
+    "imagine if",
+    "have you heard",
+]
+
+# Approved SFX types the tagger can assign
+VALID_SFX_TYPES = [
+    "boom", "heartbeat", "creepy_crawl",
+    "deep_rumble", "water_drop", "thunder", "reveal", "whoosh",
+]
 
 
 def _pick_affiliate_book(topic: Topic, niche_key: str) -> dict | None:
@@ -88,66 +129,106 @@ def _pick_affiliate_book(topic: Topic, niche_key: str) -> dict | None:
         return None
 
 
-# ── Niche-specific script personalities ────────────────────────────────────
-# Each niche gets extra prompt instructions that override the generic structure
-# to match the viral format that performs best for that content type.
+def _validate_and_fix_hook(narration: str) -> str:
+    """
+    Enforce the anti-"Did you know" hook rules.
+    If the narration starts with a banned opener, strip the bad opener and
+    restructure to start mid-sentence with the core claim.
+    """
+    if not narration:
+        return narration
 
-NICHE_SCRIPT_EXTRAS: dict[str, str] = {
+    first_line = narration.lstrip().split(".")[0].lower()
 
-    "body_science": """
-⚡ BODY SCIENCE FORMAT — Biological Countdown:
-  [HOOK]    Start with a shocking body-horror question the viewer MUST know the answer to.
-            Example: "Your stomach starts dissolving itself exactly 3 minutes after this."
-  [CONTENT] Use a COUNTDOWN FORMAT with precise time markers and scientific numbers:
-            "At 30 seconds: your blood pressure spikes 40%. At 2 minutes: your liver..."
-            Include real medical units (mg, mmHg, °C) and clinical terms.
-  [TWIST]   End with the counterintuitive medical verdict that flips their assumption.
-  ✅ Use fast, punchy medical language. Sound like a toxicologist, not a teacher.
-""",
+    for banned in BANNED_OPENERS:
+        if first_line.startswith(banned):
+            # Log the violation — script engine will re-ask Gemini if this happens
+            log.warning(f"Hook violation detected: starts with banned opener '{banned}'")
+            # Strip the bad sentence and use the second sentence as the hook
+            sentences = [s.strip() for s in narration.split(".") if s.strip()]
+            if len(sentences) > 1:
+                # Reconstruct without the bad first sentence
+                return ". ".join(sentences[1:]) + "."
+            break
 
-    "alternate_history": """
-⚡ ALTERNATE HISTORY FORMAT — Cinematic Reveal:
-  [HOOK]    Open with a real historical fact that sounds impossible or was hidden.
-            Example: "In 1908, the US government erased this city from every map."
-  [CONTENT] Stack 2-3 real facts that build toward an impossible "what if" scenario.
-            End each fact with "But what if..." to create the alternate timeline.
-  [TWIST]   Reveal the chilling alternate outcome — or the real cover-up explanation.
-  ✅ Mix real documented history with dark speculation. Make it cinematic and urgent.
-""",
+    return narration
 
-    "animal_pov": """
-⚡ ANIMAL POV FORMAT — First-Person Inner Monologue:
-  [HOOK]    Start IN the animal's head, mid-action, with raw survival instinct.
-            Example: "I can smell it. The shadow is 40 feet away. My heart is at 300 BPM."
-  [CONTENT] Stay in first person. Describe what the animal SENSES with scientific accuracy.
-            Use real animal biology facts woven into the inner monologue voice.
-  [TWIST]   End with the survival outcome — or the shocking biological fact about this species.
-  ✅ Write in PRESENT TENSE. Make it visceral, fast, and immersive. You ARE the animal.
-""",
 
-    "pause_bait": """
-⚡ PAUSE-BAIT FORMAT — The High-Stakes Challenge:
-  [HOOK]    Open with an impossible-sounding challenge that forces engagement.
-            Example: "99% of people cannot find the hidden number in this image in 5 seconds."
-  [CONTENT] Build urgency with a countdown. Give the viewer one clue that almost helps.
-            "The answer is hidden in plain sight. Most people look in the wrong place first."
-  [TWIST]   Reveal the answer — but make it feel earned. Add one more mind-bending fact.
-  ✅ Use challenge language: "Pause right now," "97% fail," "comment your answer below."
-  ✅ End the narration prompting viewers to comment — this signals the algorithm.
-""",
-}
+def _tag_sfx_with_gemini(narration: str, niche: dict) -> list[SfxTag]:
+    """
+    Ask Gemini to tag each sentence with the most appropriate SFX type.
+    This is a lightweight second Gemini call — fast and deterministic.
+
+    Falls back to empty list if it fails (keyword matching in asset_engine handles it).
+    """
+    sentences = [s.strip() for s in narration.replace("!", ".").replace("?", ".").split(".") if s.strip()]
+    if not sentences:
+        return []
+
+    sfx_palette = niche.get("sfx_palette", VALID_SFX_TYPES)
+    numbered = "\n".join(f"{i}: \"{s}\"" for i, s in enumerate(sentences))
+
+    prompt = f"""You are a sound designer for viral short-form video content.
+
+Given these narration sentences, assign the SINGLE most effective sound effect
+for each sentence that has a clear sonic match. Not every sentence needs an SFX.
+
+Available SFX types: {', '.join(sfx_palette)}
+
+SFX meanings:
+- boom: sudden impact, crash, massive force
+- heartbeat: body, survival, pulse, living organisms
+- creepy_crawl: spiders, insects, parasites, crawling things
+- deep_rumble: ancient, buried, underground, ominous atmosphere
+- water_drop: ocean, depth, underwater, pressure, sea creatures
+- thunder: storms, war, disaster, catastrophic events
+- reveal: shocking discovery, truth unveiled, classified info revealed
+- whoosh: fast movement, speed, cutting through
+
+Sentences:
+{numbered}
+
+Reply with ONLY a JSON array. Only include sentences that have a clear SFX match.
+Each item must have "sentence_index" (int) and "sfx_type" (string from the list above).
+Example: [{{"sentence_index": 0, "sfx_type": "boom"}}, {{"sentence_index": 3, "sfx_type": "reveal"}}]
+If nothing matches well, reply with: []
+"""
+
+    try:
+        result = ask_json(prompt)
+        if not isinstance(result, list):
+            return []
+        # Validate each entry
+        valid: list[SfxTag] = []
+        for item in result:
+            if (
+                isinstance(item, dict)
+                and isinstance(item.get("sentence_index"), int)
+                and item.get("sfx_type") in VALID_SFX_TYPES
+            ):
+                valid.append(SfxTag(
+                    sentence_index=item["sentence_index"],
+                    sfx_type=item["sfx_type"],
+                ))
+        log.info(f"SFX tags from Gemini: {len(valid)} events")
+        return valid
+    except Exception as exc:
+        log.warning(f"Gemini SFX tagging failed ({exc}) — using keyword fallback")
+        return []
 
 
 def generate_script(topic: Topic) -> Script:
     """
     Ask Gemini to write a complete, niche-specific video script.
     The script is engineered for maximum watch-time and virality.
+
+    Enforces strict hook rules:
+      - No "Did you know", no fade-in, no pleasantries
+      - Must start mid-sentence with the most shocking claim
+      - First sentence ≤ 12 words, already in the action
     """
     niche = config.get_niche()
     log.info(f"═══ Script Engine: [{niche['display_name']}] writing '{topic['topic']}' ═══")
-
-    # Niche-specific format override (biological countdown, POV monologue, etc.)
-    niche_extras = NICHE_SCRIPT_EXTRAS.get(config.ACTIVE_NICHE, "")
 
     affiliate_instruction = ""
     if niche.get("affiliate_link"):
@@ -156,19 +237,9 @@ def generate_script(topic: Topic) -> Script:
             f"the description for more information about this topic."
         )
 
-    # Pre-compute the structure block OUTSIDE the f-string.
-    # Python f-strings cannot contain triple-quoted strings inside {} expressions.
-    _default_structure = (
-        "Structure (tight, punchy):\n"
-        "  [HOOK]    1-2 sentences -- shock or question. No pleasantries.\n"
-        "  [CONTENT] 2-3 surprising facts. Short sentences only.\n"
-        "  [TWIST]   One final revelation.\n"
-        "  [CTA]     1 sentence: \"Hit like and subscribe for more!\"\n"
-    )
-    structure_block = niche_extras if niche_extras else _default_structure
     niche_hashtag = niche['display_name'].replace(' ', '')
 
-    prompt = f"""You are a professional scriptwriter for the viral short-video channel
+    prompt = f"""You are a professional scriptwriter for the viral short-form channel
 "{niche['display_name']}" {niche['emoji']}.
 
 Channel voice / style:
@@ -179,26 +250,48 @@ ANGLE: {topic['angle']}
 OPENING HOOK: {topic['hook']}
 {affiliate_instruction}
 
---- SCRIPT REQUIREMENTS ---
-Narration length: 75-95 words MAX (spoken in ~30-38 seconds)
-This is a SHORT-FORM video -- every single word must earn its place.
+━━━ HOOK RULES — THESE ARE ABSOLUTE ━━━
+❌ NEVER start with: "Did you know", "Welcome", "Have you ever",
+   "Today we", "Let me tell you", "Imagine if", "Hey guys", or any pleasantry.
+   These are INSTANT SWIPE triggers. Starting with them = video fails.
 
-{structure_block}
+✅ INSTEAD: Start with the most terrifying/shocking/impossible claim.
+   The narration must begin MID-SENTENCE, as if the viewer is already deep
+   inside the story. The AI voice starts speaking on FRAME 1 — no dead air.
+
+BAD hook:  "Did you know that the deep sea holds many mysteries?"
+GREAT hook: "If you swim past 1,000 feet, your lungs will literally crush themselves."
+
+BAD hook:  "Welcome back! Today we're talking about ancient Egypt."
+GREAT hook: "In 1908, the Egyptian government erased this city from every map."
+
+The first sentence must be ≤ 12 words and be the single most shocking claim
+in the entire video. The viewer must be unable to scroll after word 3.
+
+━━━ SCRIPT REQUIREMENTS ━━━
+Narration length: 75-95 words MAX (spoken in ~30-38 seconds at natural pace)
+Every single word must earn its place. Cut all filler.
+
+Structure:
+  [HOOK]    1 sentence — the craziest claim, mid-sentence, no buildup.
+  [CONTENT] 3-4 punchy sentences. Stack shocking facts. Short sentences only.
+  [TWIST]   One final revelation that reframes everything.
+  [CTA]     Exactly: "Hit like and subscribe for more!"
 
 Style rules:
-  - Sentences under 10 words each -- short, punchy, unstoppable rhythm
-  - Audio-only friendly -- no visual references
-  - Match the channel voice/tone EXACTLY
+  - Sentences under 10 words each — short, punchy, unstoppable rhythm
+  - Audio-only friendly — no visual references ("as you can see", "look at this")
+  - Sound like the narration is urgent classified information
   - STRICT word limit: 75-95 words, count carefully
   - The final CTA must ALWAYS be exactly: "Hit like and subscribe for more!"
 
---- METADATA REQUIREMENTS ---
-Title: max 60 chars, 1 emoji, punchy hook
+━━━ METADATA REQUIREMENTS ━━━
+Title: max 60 chars, 1 emoji, punchy hook that mirrors the narration opener
 Description: 2 sentences, SEO keywords
 Hashtags: 14, must include #Shorts, #Viral, #{niche_hashtag}
-Thumbnail text: 2-3 words MAX, ALL CAPS (e.g. "THEY HID THIS")
+Thumbnail text: 2-3 words MAX, ALL CAPS, the most shocking claim (e.g. "LUNGS COLLAPSE")
 
---- REPLY FORMAT ---
+━━━ REPLY FORMAT ━━━
 Reply with ONLY this JSON (no markdown, no explanation):
 {{
   "title": "...",
@@ -211,16 +304,44 @@ Reply with ONLY this JSON (no markdown, no explanation):
 }}
 """
 
-    script: Script = ask_json(prompt)
+    max_attempts = 3
+    script: Script = {}
 
-    # Always enforce the CTA — never let Gemini use a channel-specific phrase
+    for attempt in range(1, max_attempts + 1):
+        script = ask_json(prompt)
+
+        # Validate hook — no banned openers
+        narration = script.get("narration", "")
+        fixed_narration = _validate_and_fix_hook(narration)
+
+        if fixed_narration != narration and attempt < max_attempts:
+            log.warning(f"Hook violation on attempt {attempt} — re-requesting from Gemini")
+            # Add a stronger instruction to the prompt
+            prompt += (
+                f"\n\n⚠️ IMPORTANT: Your previous narration started with a banned opener. "
+                f"Start with the SHOCKING CLAIM directly. No pleasantries. "
+                f"The first word must be part of the horrifying fact itself."
+            )
+            continue
+
+        script["narration"] = fixed_narration
+        break
+
+    # Always enforce the CTA
     script["cta"] = "Hit like and subscribe for more!"
 
     # ── Enforce invariants ──────────────────────────────────────────────────────
-    if "#Shorts" not in script["hashtags"]:
+    if "#Shorts" not in script.get("hashtags", []):
+        if "hashtags" not in script:
+            script["hashtags"] = []
         script["hashtags"].insert(0, "#Shorts")
     if len(script.get("title", "")) > 100:
         script["title"] = script["title"][:97] + "…"
+
+    # ── SFX Tagging pass ────────────────────────────────────────────────────────
+    log.info("Running Gemini SFX tagging pass…")
+    sfx_tags = _tag_sfx_with_gemini(script.get("narration", ""), niche)
+    script["sfx_tags"] = sfx_tags
 
     # ── Affiliate link (Audible auto-pick → fallback to manual link) ────────────
     affiliate_line = ""
@@ -248,6 +369,7 @@ Reply with ONLY this JSON (no markdown, no explanation):
     word_count = len(script.get("narration", "").split())
     log.info(
         f"Script ready | {word_count} words | "
+        f"sfx_tags={len(sfx_tags)} | "
         f"title: {script.get('title', '')[:50]}…"
     )
     return script

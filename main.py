@@ -3,18 +3,21 @@ main.py — Orchestrator for the Faceless Video Network pipeline.
 
 Runs ONE complete video generation cycle:
   1. Trend Engine   — finds the best story for the active niche
-  2. Script Engine  — Gemini writes the full script
-  3. Asset Engine   — downloads Pexels footage + generates music
-  4. Voice Engine   — ElevenLabs (or edge-tts) narration + kinetic captions
+  2. Script Engine  — Gemini writes the full script + SFX tags
+  3. Asset Engine   — downloads Pexels footage + generates music + SFX
+  4. Voice Engine   — ElevenLabs narration + aligned kinetic Hormozi captions
   5. Video Engine   — FFmpeg assembles the 1080×1920 portrait video
   6. Publisher      — uploads to YouTube Shorts + TikTok
 
-Called by GitHub Actions twice per day (9am ET + 9pm ET).
-Can also be run locally for testing.
+Called by GitHub Actions once per day (9pm ET evening run only).
+Morning run is disabled.
 
-Usage:
+IMPORTANT: ElevenLabs is required. If quota is exhausted, production stops.
+No fallback TTS is used. The script exits with code 1 and logs the reason.
+
+Can also be run locally for testing:
   NICHE=historical_mysteries python main.py
-  NICHE=stoic_philosophy python main.py --dry-run
+  NICHE=deep_sea python main.py --dry-run
 """
 
 import argparse
@@ -28,7 +31,7 @@ import config
 from engines.trend_engine import get_trending_topic
 from engines.script_engine import generate_script
 from engines.asset_engine import gather_assets
-from engines.voice_engine import generate_voiceover
+from engines.voice_engine import generate_voiceover, ElevenLabsQuotaError
 from engines.video_engine import assemble_video
 from engines.publisher import publish
 from utils.file_manager import fresh_run_dir, cleanup
@@ -41,6 +44,8 @@ def run_pipeline(dry_run: bool = False) -> dict:
     """
     Execute the full video generation and publishing pipeline.
     Returns a results dict with all URLs and metadata.
+
+    Exits early (with code 1) if ElevenLabs quota is exhausted.
     """
     niche = config.get_niche()
     start_time = datetime.utcnow()
@@ -60,7 +65,7 @@ def run_pipeline(dry_run: bool = False) -> dict:
         "youtube_url": None,
         "tiktok_url": None,
         "video_duration": None,
-        "voice_engine": None,
+        "voice_engine": "elevenlabs",
         "success": False,
         "error": None,
     }
@@ -71,16 +76,18 @@ def run_pipeline(dry_run: bool = False) -> dict:
         results["topic"] = topic["topic"]
         log.info(f"\n✦ Topic: {topic['topic']}\n  Angle: {topic['angle']}\n")
 
-        # ── 2. Generate script ──────────────────────────────────────────────
+        # ── 2. Generate script (with SFX tags + hook rules) ─────────────────
         script = generate_script(topic)
         results["title"] = script["title"]
         log.info(f"✦ Title: {script['title']}\n")
+        log.info(f"✦ Hook: {script.get('hook', '(see narration)')}\n")
 
-        # ── 3. Download assets ──────────────────────────────────────────────
+        # ── 3. Download assets (clips + music + SFX) ────────────────────────
         assets = gather_assets(topic, script, run_dir)
         log.info(f"✦ Assets: {len(assets['video_clips'])} clips downloaded\n")
 
-        # ── 4. Generate voiceover + captions ──────────────────────────────
+        # ── 4. Generate voiceover + aligned captions ─────────────────────────
+        # ElevenLabsQuotaError propagates here if quota is exhausted
         voice = generate_voiceover(script["narration"], run_dir)
         results["voice_engine"] = voice["engine"]
         log.info(f"✦ Voice: {voice['duration']:.1f}s via {voice['engine']}\n")
@@ -116,6 +123,16 @@ def run_pipeline(dry_run: bool = False) -> dict:
         log.info(f"  YouTube: {results['youtube_url'] or 'failed'}")
         log.info(f"  TikTok:  {results['tiktok_url'] or 'failed'}")
         log.info("=" * 65)
+
+    except ElevenLabsQuotaError as exc:
+        # ── ElevenLabs quota exhausted — HARD STOP, no fallback ────────────
+        results["error"] = str(exc)
+        results["voice_engine"] = "elevenlabs_quota_exhausted"
+        log.error("=" * 65)
+        log.error("  ⛔ ELEVENLABS QUOTA EXHAUSTED — VIDEO PRODUCTION STOPPED")
+        log.error(f"  {exc}")
+        log.error("  No fallback TTS will be used. Resolve quota and retry.")
+        log.error("=" * 65)
 
     except Exception as exc:
         results["error"] = str(exc)
