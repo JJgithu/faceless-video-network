@@ -46,7 +46,7 @@ CLAUDE_MODEL         = "claude-sonnet-4-6"
 
 # ── Edge TTS (free fallback when ElevenLabs quota exhausted) ───────────────
 # No API key needed. Uses Microsoft's neural voices via edge-tts package.
-EDGE_TTS_VOICE       = "en-US-GuyNeural"   # Deep, serious, male documentary-style
+EDGE_TTS_VOICE       = "en-GB-RyanNeural"  # British male — warm, authoritative (Attenborough style)
 
 # ── Kling AI (AI video generation — Hybrid pipeline cinematographer) ───────
 KLING_API_KEY        = os.environ.get("KLING_API_KEY", "")
@@ -81,8 +81,8 @@ GEMINI_MODEL = "gemini-2.5-flash"
 VIDEO_WIDTH        = 1080
 VIDEO_HEIGHT       = 1920
 VIDEO_FPS          = 30
-MAX_VIDEO_DURATION = 45    # seconds — keep videos tight and engaging
-MIN_VIDEO_DURATION = 20
+MAX_VIDEO_DURATION = 35    # seconds — shorter, punchier videos
+MIN_VIDEO_DURATION = 15
 INTRO_DURATION     = 0.0   # NO intro card — video starts instantly in action
 OUTRO_DURATION     = 3.0   # CTA card
 MUSIC_VOLUME       = 0.10  # background music mix level
@@ -107,11 +107,12 @@ TTS_SPEEDUP        = 1.0
 FIRST_CLIP_TRIM_START = 0.5
 
 # ── ElevenLabs ─────────────────────────────────────────────────────────────
+# Voice settings — tuned for warm British documentary narration (Attenborough style)
 # Model: eleven_turbo_v2_5 is fast + high-quality, perfect for automation
 ELEVENLABS_MODEL         = "eleven_turbo_v2_5"
-ELEVENLABS_STABILITY     = 0.50
+ELEVENLABS_STABILITY     = 0.65   # higher = calmer, more measured delivery
 ELEVENLABS_SIMILARITY    = 0.80
-ELEVENLABS_STYLE         = 0.20
+ELEVENLABS_STYLE         = 0.10   # lower = less dramatic, more natural Attenborough cadence
 ELEVENLABS_SPEAKER_BOOST = True
 
 # ── Caption / subtitle settings (Hormozi style) ─────────────────────────────
@@ -176,8 +177,8 @@ NICHES: dict[str, dict] = {
             "AlternateHistory", "interestingasfuck", "science",
         ],
         "wikipedia_unusual": True,
-        # ElevenLabs voice — deep, authoritative male narrator
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_HISTORY", "pNInz6obpgDQGcFmaJgB"),
+        # ElevenLabs voice — warm British documentary narrator (Attenborough style)
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_HISTORY", "onwK4e9ZLuTAKqWW03F9"),
         # Channel IDs (set per-channel in GitHub Secrets)
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_HISTORY", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_HISTORY", TIKTOK_ACCESS_TOKEN),
@@ -211,7 +212,7 @@ NICHES: dict[str, dict] = {
             "todayilearned", "mildlyinteresting",
         ],
         "wikipedia_unusual": True,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_OCEAN", "21m00Tcm4TlvDq8ikWAM"),
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_OCEAN", "onwK4e9ZLuTAKqWW03F9"),
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_OCEAN", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_OCEAN", TIKTOK_ACCESS_TOKEN),
         "affiliate_link": os.environ.get("AFFILIATE_OCEAN", ""),
@@ -241,7 +242,7 @@ NICHES: dict[str, dict] = {
             "interestingasfuck", "NatureIsFuckingLit",
         ],
         "wikipedia_unusual": True,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_BODY", "pNInz6obpgDQGcFmaJgB"),
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_BODY", "onwK4e9ZLuTAKqWW03F9"),
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_BODY", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_BODY", TIKTOK_ACCESS_TOKEN),
         "affiliate_link": os.environ.get("AFFILIATE_BODY", ""),
@@ -272,7 +273,7 @@ NICHES: dict[str, dict] = {
             "mildlyinteresting", "AskHistorians",
         ],
         "wikipedia_unusual": True,
-        "elevenlabs_voice_id": os.environ.get("EL_VOICE_ALTHISTORY", "ErXwobaYiN019PkySvjV"),
+        "elevenlabs_voice_id": os.environ.get("EL_VOICE_ALTHISTORY", "onwK4e9ZLuTAKqWW03F9"),
         "youtube_channel_id": os.environ.get("YT_CHANNEL_ID_ALTHISTORY", ""),
         "tiktok_access_token": os.environ.get("TIKTOK_TOKEN_ALTHISTORY", TIKTOK_ACCESS_TOKEN),
         "affiliate_link": os.environ.get("AFFILIATE_ALTHISTORY", ""),
