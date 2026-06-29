@@ -98,8 +98,8 @@ HOOK_SFX_VOLUME    = 0.85           # loud enough to wake the viewer up
 SFX_VOLUME         = 0.65           # inline SFX mix level (under voice)
 
 # ── TTS Speedup (Hybrid pipeline retention fix) ───────────────────────────
-# 1.15x speedup makes narration sound fast and urgent — zero gaps of silence
-TTS_SPEEDUP        = 1.15
+# 1.0 = natural speed (no acceleration)
+TTS_SPEEDUP        = 1.0
 
 # ── First Clip Trim (Hybrid pipeline retention fix) ───────────────────────
 # Kling AI videos often start with a frozen frame. Chop 0.5s off clip 1
