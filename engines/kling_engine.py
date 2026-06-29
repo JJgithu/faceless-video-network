@@ -13,7 +13,7 @@ CRITICAL IMPLEMENTATION DETAILS:
   - Async Polling: Kling takes 2-4 minutes to render. We submit all 4 clips
     simultaneously and poll the status endpoint every 15s until SUCCESS.
   - Timeout: 10 minutes max per clip. After timeout, skip that clip.
-  - Fallback: If ALL Kling clips fail, fall back to Pexels stock footage.
+  - Fallback: If ALL Kling clips fail, the pipeline stops with an error.
 
 API Reference:
   - Base URL: https://api-singapore.klingai.com
@@ -317,7 +317,7 @@ def generate_kling_clips(
     )
 
     if not downloaded:
-        log.error("ALL Kling clips failed — falling back to Pexels stock footage")
+        log.error("ALL Kling clips failed — pipeline will stop (no fallback)")
 
     return KlingResult(
         video_clips=downloaded,

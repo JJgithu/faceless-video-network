@@ -88,14 +88,14 @@ def _run_hybrid_pipeline(topic: dict, run_dir: Path, dry_run: bool) -> dict:
         f"{len(kling_result['failed_clips'])} failed\n"
     )
 
-    # If ALL Kling clips failed, fall back to Pexels
+    # All clips must come from Kling AI — no Pexels fallback
     video_clips = kling_result["video_clips"]
     if not video_clips:
-        log.warning("All Kling clips failed — falling back to Pexels stock footage")
-        from engines.asset_engine import download_video_clips
-        niche = config.get_niche()
-        search_keywords = topic["keywords"] + [topic["topic"]] + niche.get("pexels_keywords", [])[:3]
-        video_clips = download_video_clips(search_keywords, run_dir)
+        raise RuntimeError(
+            "All 4 Kling AI clips failed to generate. "
+            "Cannot produce video without AI-generated footage. "
+            "Check Kling API key, quota, and logs above for details."
+        )
 
     # ── Generate shared assets (music + SFX) ────────────────────────────
     music_duration = config.MAX_VIDEO_DURATION + 5
