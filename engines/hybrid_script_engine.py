@@ -90,7 +90,7 @@ RULES:
 
 The Hook: The first sentence MUST be a pattern interrupt. NEVER use polite introductions, 'Welcome to,' or 'Did you know.' Start mid-action with a terrifying or bizarre fact.
 
-Pacing: The script must be exactly 80 to 95 words (approx. 40-45 seconds spoken).
+Pacing: The script must be exactly 50 to 65 words (approx. 20-25 seconds spoken).
 
 Visual Prompts: You must generate exactly 4 distinct visual prompts to accompany the script. These prompts will be sent to Kling AI. Kling thrives on strict photorealism keywords. Include descriptors like: 'photorealistic, cinematic, murky lighting, gritty, archival 1920s footage, VHS grain, macro close-up.' Keep camera movements simple.
 
@@ -230,7 +230,7 @@ CHANNEL STYLE: {niche['style']}
 
 ADDITIONAL REQUIREMENTS:
 - Title must include #shorts at the end
-- The spoken_script MUST be exactly 80-95 words. Count carefully.
+- The spoken_script MUST be exactly 50-65 words. Count carefully.
 - First sentence must be ≤ 12 words — the most shocking claim in the entire video
 - NEVER start with "Did you know", "Welcome", "Have you ever", "Today we", or any pleasantry
 - Start MID-SENTENCE with the terrifying/shocking/impossible claim
@@ -266,8 +266,8 @@ Generate the JSON now."""
 
     # Validate word count
     word_count = len(spoken_script.split())
-    if word_count < 60 or word_count > 120:
-        log.warning(f"Word count {word_count} outside ideal range (80-95), but proceeding")
+    if word_count < 35 or word_count > 85:
+        log.warning(f"Word count {word_count} outside ideal range (50-65), but proceeding")
 
     # Validate hook
     spoken_script = _validate_and_fix_hook(spoken_script)
