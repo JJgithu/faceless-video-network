@@ -203,6 +203,21 @@ def run_pipeline(dry_run: bool = False) -> dict:
 
     run_dir = fresh_run_dir()
 
+    # Initialize results early so error handlers always have something to write to
+    results = {
+        "pipeline": pipeline_mode,
+        "niche": config.ACTIVE_NICHE,
+        "started_at": start_time.isoformat(),
+        "topic": None,
+        "title": None,
+        "youtube_url": None,
+        "tiktok_url": None,
+        "video_duration": None,
+        "voice_engine": None,
+        "success": False,
+        "error": None,
+    }
+
     try:
         # ── 1. Discover trending topic ──────────────────────────────────────
         topic = get_trending_topic()

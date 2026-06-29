@@ -275,7 +275,9 @@ def _sfx_heartbeat(duration: float = 1.2) -> np.ndarray:
             return np.zeros_like(t_arr)
         seg = t_arr[mask] - start
         env = np.sin(np.pi * seg / pulse_dur) ** 2
-        return mask * env * np.sin(2 * np.pi * freq * t_arr) * mask
+        out = np.zeros_like(t_arr)
+        out[mask] = env * np.sin(2 * np.pi * freq * seg)
+        return out
 
     t = np.linspace(0, duration, n, dtype=np.float32)
     audio += _pulse(t, 0.0, 80)    # LUB
