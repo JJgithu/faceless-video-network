@@ -42,7 +42,7 @@ ELEVENLABS_API_KEY   = os.environ.get("ELEVENLABS_API_KEY", "")   # Primary voic
 
 # ── Anthropic (Claude 3.5 Sonnet — Hybrid pipeline brain) ─────────────────
 ANTHROPIC_API_KEY    = os.environ.get("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL         = "claude-3-5-sonnet-20240620"
+CLAUDE_MODEL         = "claude-sonnet-4-6"
 
 # ── Edge TTS (free fallback when ElevenLabs quota exhausted) ───────────────
 # No API key needed. Uses Microsoft's neural voices via edge-tts package.
