@@ -180,6 +180,15 @@ def _poll_task_status(task_id: str, clip_number: int) -> str | None:
                         if result_videos:
                             video_url = result_videos[0].get("url")
 
+                # Format 5: task_data.task_result.videos[0].url
+                # (confirmed real Kling API format as of June 2026)
+                if not video_url:
+                    task_result = task_data.get("task_result", {})
+                    if isinstance(task_result, dict):
+                        tr_videos = task_result.get("videos", [])
+                        if tr_videos:
+                            video_url = tr_videos[0].get("url")
+
                 if video_url:
                     log.info(
                         f"✅ Kling clip {clip_number}: completed in {elapsed}s"
