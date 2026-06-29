@@ -13,8 +13,21 @@ from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# Configure client once at import time
-_client = genai.Client(api_key=GEMINI_API_KEY)
+# Configure client lazily (avoid crash when GEMINI_API_KEY is not set in hybrid mode)
+_client = None
+
+
+def _get_client():
+    """Lazily initialise the Gemini client on first use."""
+    global _client
+    if _client is None:
+        if not GEMINI_API_KEY:
+            raise ValueError(
+                "GEMINI_API_KEY is not set. Required for legacy pipeline "
+                "and SFX tagging. Set the secret in .env or GitHub Secrets."
+            )
+        _client = genai.Client(api_key=GEMINI_API_KEY)
+    return _client
 
 
 def ask(prompt: str, retries: int = 30, delay: float = 5.0) -> str:
@@ -27,7 +40,7 @@ def ask(prompt: str, retries: int = 30, delay: float = 5.0) -> str:
     for attempt in range(1, retries + 1):
         try:
             log.debug(f"Gemini request (attempt {attempt}): {prompt[:120]}...")
-            response = _client.models.generate_content(
+            response = _get_client().models.generate_content(
                 model=GEMINI_MODEL,
                 contents=prompt,
             )

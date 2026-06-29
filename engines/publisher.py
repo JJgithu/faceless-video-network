@@ -52,19 +52,23 @@ def _get_youtube_service():
 def upload_to_youtube(video_path: Path, script: Script) -> tuple[str, str]:
     """
     Upload the video to YouTube as a Short.
+    Supports both hybrid (youtube_title) and legacy (title) script formats.
     Returns (youtube_id, youtube_url).
     """
     log.info("Uploading to YouTube Shorts…")
 
+    # Support both hybrid and legacy script title fields
+    title = script.get("youtube_title") or script.get("title", "Dark Lore #shorts")
+
     # Build description with hashtags — #Shorts triggers Shorts distribution
-    hashtag_str = " ".join(script["hashtags"])
-    description = f"{script['description']}\n\n{hashtag_str}"
+    hashtag_str = " ".join(script.get("hashtags", ["#Shorts"]))
+    description = f"{script.get('description', '')}\n\n{hashtag_str}"
 
     body = {
         "snippet": {
-            "title": script["title"],
+            "title": title,
             "description": description,
-            "tags": [h.lstrip("#") for h in script["hashtags"]],
+            "tags": [h.lstrip("#") for h in script.get("hashtags", ["#Shorts"])],
             "categoryId": config.YOUTUBE_CATEGORY_ID,
             "defaultLanguage": "en",
         },

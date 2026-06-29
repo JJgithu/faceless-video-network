@@ -1,17 +1,16 @@
 name: 🎬 Faceless Video Pipeline
 
 on:
-  # ONE video per day — evening run only (9pm ET)
-  # Morning run is intentionally disabled.
+  # TWO videos per day — morning + evening runs
   schedule:
-    # - cron: '0 13 * * *'   # 9am ET — DISABLED (morning run off)
-    - cron: '0 1  * * *'     # 9pm ET — Evening run (active)
+    - cron: '0 13 * * *'   # 9am ET — Morning run (active)
+    - cron: '0 1  * * *'   # 9pm ET — Evening run (active)
 
   # External trigger (cron-job.org backup in case GitHub scheduler skips)
   # POST https://api.github.com/repos/JJgithu/faceless-video-network/dispatches
-  # Body: {"event_type": "evening_batch"}
+  # Body: {"event_type": "morning_batch"} or {"event_type": "evening_batch"}
   repository_dispatch:
-    types: [evening_batch]
+    types: [morning_batch, evening_batch]
 
   # Manual trigger — pick one niche or run the full rotation
   workflow_dispatch:
@@ -35,12 +34,20 @@ on:
         options:
           - 'false'
           - 'true'
+      pipeline:
+        description: 'Pipeline mode'
+        required: false
+        default: 'hybrid'
+        type: choice
+        options:
+          - 'hybrid'
+          - 'legacy'
 
 jobs:
   generate-and-upload:
-    name: "🎬 Evening Video"
+    name: "🎬 Video Generation"
     runs-on: ubuntu-latest
-    timeout-minutes: 35   # one full video needs up to 35 min
+    timeout-minutes: 45   # hybrid pipeline with Kling polling needs more time
 
     permissions:
       contents: write   # needed to commit topic history back to repo
@@ -70,53 +77,64 @@ jobs:
       - name: 📦 Install Python dependencies
         run: pip install -r requirements.txt
 
-      # ── Run pipeline (one niche per evening) ────────────────────────────────
+      # ── Run pipeline (2 videos per day — morning + evening) ──────────────
       - name: 🎬 Run video pipeline
         env:
-          # Core AI
-          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
-          ELEVENLABS_API_KEY:    ${{ secrets.ELEVENLABS_API_KEY }}
+          # Pipeline mode
+          PIPELINE_MODE: ${{ github.event.inputs.pipeline || 'hybrid' }}
 
-          # Pexels stock footage
-          PEXELS_API_KEY:        ${{ secrets.PEXELS_API_KEY }}
+          # Anthropic (Claude 3.5 Sonnet — hybrid brain)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Kling AI (AI video generation)
+          KLING_API_KEY: ${{ secrets.KLING_API_KEY }}
+
+          # Gemini (legacy pipeline + SFX tagging)
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+          # ElevenLabs (primary voice — Edge TTS is free fallback, no key needed)
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+
+          # Pexels stock footage (legacy + fallback)
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
 
           # YouTube OAuth
-          YOUTUBE_CLIENT_ID:     ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
 
           # TikTok
-          TIKTOK_CLIENT_KEY:     ${{ secrets.TIKTOK_CLIENT_KEY }}
-          TIKTOK_CLIENT_SECRET:  ${{ secrets.TIKTOK_CLIENT_SECRET }}
-          TIKTOK_ACCESS_TOKEN:   ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
 
           # Affiliate (Amazon Associates covers both Amazon books + Audible)
-          AMAZON_AFFILIATE_TAG:  ${{ secrets.AMAZON_AFFILIATE_TAG }}
+          AMAZON_AFFILIATE_TAG: ${{ secrets.AMAZON_AFFILIATE_TAG }}
           AUDIBLE_AFFILIATE_TAG: ${{ secrets.AUDIBLE_AFFILIATE_TAG }}
 
           # Per-niche ElevenLabs voices
-          EL_VOICE_HISTORY:      ${{ secrets.EL_VOICE_HISTORY }}
-          EL_VOICE_OCEAN:        ${{ secrets.EL_VOICE_OCEAN }}
-          EL_VOICE_BODY:         ${{ secrets.EL_VOICE_BODY }}
-          EL_VOICE_ALTHISTORY:   ${{ secrets.EL_VOICE_ALTHISTORY }}
+          EL_VOICE_HISTORY: ${{ secrets.EL_VOICE_HISTORY }}
+          EL_VOICE_OCEAN: ${{ secrets.EL_VOICE_OCEAN }}
+          EL_VOICE_BODY: ${{ secrets.EL_VOICE_BODY }}
+          EL_VOICE_ALTHISTORY: ${{ secrets.EL_VOICE_ALTHISTORY }}
 
           # Per-niche YouTube channel IDs
-          YT_CHANNEL_ID_HISTORY:    ${{ secrets.YT_CHANNEL_ID_HISTORY }}
-          YT_CHANNEL_ID_OCEAN:      ${{ secrets.YT_CHANNEL_ID_OCEAN }}
-          YT_CHANNEL_ID_BODY:       ${{ secrets.YT_CHANNEL_ID_BODY }}
+          YT_CHANNEL_ID_HISTORY: ${{ secrets.YT_CHANNEL_ID_HISTORY }}
+          YT_CHANNEL_ID_OCEAN: ${{ secrets.YT_CHANNEL_ID_OCEAN }}
+          YT_CHANNEL_ID_BODY: ${{ secrets.YT_CHANNEL_ID_BODY }}
           YT_CHANNEL_ID_ALTHISTORY: ${{ secrets.YT_CHANNEL_ID_ALTHISTORY }}
 
           # Per-niche TikTok tokens
-          TIKTOK_TOKEN_HISTORY:    ${{ secrets.TIKTOK_TOKEN_HISTORY }}
-          TIKTOK_TOKEN_OCEAN:      ${{ secrets.TIKTOK_TOKEN_OCEAN }}
-          TIKTOK_TOKEN_BODY:       ${{ secrets.TIKTOK_TOKEN_BODY }}
+          TIKTOK_TOKEN_HISTORY: ${{ secrets.TIKTOK_TOKEN_HISTORY }}
+          TIKTOK_TOKEN_OCEAN: ${{ secrets.TIKTOK_TOKEN_OCEAN }}
+          TIKTOK_TOKEN_BODY: ${{ secrets.TIKTOK_TOKEN_BODY }}
           TIKTOK_TOKEN_ALTHISTORY: ${{ secrets.TIKTOK_TOKEN_ALTHISTORY }}
 
           # Affiliate links (optional)
-          AFFILIATE_HISTORY:     ${{ secrets.AFFILIATE_HISTORY }}
-          AFFILIATE_OCEAN:       ${{ secrets.AFFILIATE_OCEAN }}
-          AFFILIATE_BODY:        ${{ secrets.AFFILIATE_BODY }}
-          AFFILIATE_ALTHISTORY:  ${{ secrets.AFFILIATE_ALTHISTORY }}
+          AFFILIATE_HISTORY: ${{ secrets.AFFILIATE_HISTORY }}
+          AFFILIATE_OCEAN: ${{ secrets.AFFILIATE_OCEAN }}
+          AFFILIATE_BODY: ${{ secrets.AFFILIATE_BODY }}
+          AFFILIATE_ALTHISTORY: ${{ secrets.AFFILIATE_ALTHISTORY }}
 
         run: |
           DRY_FLAG=""
@@ -125,27 +143,40 @@ jobs:
           fi
 
           # ── Determine which niche to run ───────────────────────────────────
-          # 4 active niches rotate across the week — 1 video per evening
-          # Priority: manual niche > repository_dispatch > schedule cron
+          # 4 active niches rotate across the week — 2 videos per day
+          # Morning run uses one niche, evening run uses the next
           MANUAL_NICHE="${{ github.event.inputs.niche }}"
 
           # 4 active niches in rotation order
           ALL_NICHES=(historical_mysteries deep_sea body_science alternate_history)
           N=${#ALL_NICHES[@]}  # 4
 
-          # Day-of-year based offset — each niche runs once every 4 days
+          # Day-of-year based offset + time-of-day offset
           DAY=$(( $(date -u +%j) - 1 ))   # 0-365
-          EVENING_NICHE=${ALL_NICHES[$(( DAY % N ))]}
+          HOUR=$(date -u +%H)             # 0-23
+
+          # Morning run (cron 13 UTC = 9am ET) → slot 0
+          # Evening run (cron 01 UTC = 9pm ET) → slot 1
+          if [ "$HOUR" -ge 6 ] && [ "$HOUR" -le 18 ]; then
+            SLOT=0  # morning
+          else
+            SLOT=1  # evening
+          fi
+
+          NICHE_INDEX=$(( (DAY * 2 + SLOT) % N ))
+          AUTO_NICHE=${ALL_NICHES[$NICHE_INDEX]}
 
           if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
             NICHE="$MANUAL_NICHE"
           else
-            NICHE="$EVENING_NICHE"
+            NICHE="$AUTO_NICHE"
           fi
 
           echo ""
           echo "════════════════════════════════════════════════════════"
-          echo "► Evening video niche: $NICHE"
+          echo "► Pipeline: ${PIPELINE_MODE:-hybrid}"
+          echo "► Niche: $NICHE"
+          echo "► Slot: $([ $SLOT -eq 0 ] && echo 'MORNING' || echo 'EVENING')"
           echo "════════════════════════════════════════════════════════"
           NICHE=$NICHE python main.py $DRY_FLAG
 
@@ -166,7 +197,7 @@ jobs:
           git config user.email "bot@faceless.local"
           git add data/used_topics.json
           git diff --staged --quiet || \
-            git commit -m "chore: update topic history [evening] [skip ci]"
+            git commit -m "chore: update topic history [skip ci]"
           # Use merge instead of rebase — resolves conflicts by keeping our new entries
           git fetch origin main
           git merge origin/main -X ours --no-edit || true

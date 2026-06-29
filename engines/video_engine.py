@@ -395,6 +395,25 @@ class VideoResult(TypedDict):
     duration: float    # Actual video duration
 
 
+def _trim_first_clip(clip: Path, trim_start: float, out: Path) -> None:
+    """
+    Trim the first N seconds from a clip to skip frozen AI frames.
+    Kling AI videos often start with a 0.5s static frame — chop it off
+    to drop the viewer instantly into motion.
+    """
+    _run_ff(
+        [
+            "-i", str(clip),
+            "-ss", f"{trim_start:.3f}",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            "-an",
+            str(out),
+        ],
+        label="trim-first-clip",
+    )
+
+
 def assemble_video(
     script: Script,
     assets: Assets,
@@ -404,7 +423,7 @@ def assemble_video(
     """
     Orchestrate all FFmpeg steps to produce the final portrait video.
 
-    New timeline (starts instantly — NO intro card, NO fade-in):
+    Timeline (starts instantly — NO intro card, NO fade-in):
 
       t=0                                    t=narration_duration
       |──── b-roll (clips every 2–3s) ────|   video = audio length
@@ -412,6 +431,10 @@ def assemble_video(
       [narration + music + inline SFX]         full audio track
                               |──outro──|      CTA overlay (last 3s)
       |── Hormozi captions (center) ──────|   1-2 words, yellow, 88px
+
+    Hybrid pipeline additions:
+      - 0.5s hard cut on first clip (skips frozen Kling AI frames)
+      - Kling clips are pre-rendered 9:16 so portrait conversion is gentler
     """
     log.info("═══ Video Engine: assembling final video ═══")
 
@@ -419,11 +442,26 @@ def assemble_video(
     total_duration     = min(narration_duration, config.MAX_VIDEO_DURATION)
     broll_duration     = total_duration
 
+    is_hybrid = config.PIPELINE_MODE == "hybrid"
+
     # ── Step 1: Convert clips to portrait (max 2.5s each) ──────────────────
     log.info("Step 1/5 — Converting clips to portrait 1080×1920 (max 2.5s each)…")
     portrait_clips: list[Path] = []
     for i, clip in enumerate(assets["video_clips"]):
         dst = run_dir / f"portrait_{i:02d}.mp4"
+
+        # ── 0.5s HARD CUT on first clip (Hybrid retention fix) ──────────
+        # Kling AI clips often start with a frozen frame.
+        # Trim exactly 0.5s from the beginning of clip 1.
+        if i == 0 and is_hybrid and config.FIRST_CLIP_TRIM_START > 0:
+            log.info(
+                f"Applying {config.FIRST_CLIP_TRIM_START}s hard cut "
+                f"on first clip (skip frozen AI frame)"
+            )
+            trimmed = run_dir / f"trimmed_{i:02d}.mp4"
+            _trim_first_clip(clip, config.FIRST_CLIP_TRIM_START, trimmed)
+            clip = trimmed
+
         clip_dur = min(_safe_dur(clip), config.CLIP_MAX_DURATION)
         pan = i % 3
         _to_portrait(clip, dst, clip_dur, pan_direction=pan)
@@ -452,7 +490,7 @@ def assemble_video(
     # Rebuild inline SFX with actual voice duration for accurate timing
     from engines.asset_engine import build_inline_sfx_cues
     sfx_tags = script.get("sfx_tags", [])
-    narration_text = script.get("narration", "")
+    narration_text = script.get("narration", "") or script.get("spoken_script", "")
     sfx_files, sfx_cues = build_inline_sfx_cues(
         narration=narration_text,
         voice_duration=narration_duration,
@@ -480,3 +518,4 @@ def assemble_video(
     log.info(f"✅ Video assembled: {actual_duration:.1f}s → {final_video.name}")
 
     return VideoResult(video_file=final_video, duration=actual_duration)
+

@@ -30,10 +30,33 @@ DATA_DIR  = BASE_DIR / "data"
 OUTPUT_DIR = Path(os.environ.get("RUNNER_TEMP", str(BASE_DIR / "output"))) / "faceless"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# ── Pipeline Mode ──────────────────────────────────────────────────────────
+# "hybrid" = Claude 3.5 Sonnet + Kling AI (new pipeline)
+# "legacy" = Gemini 2.5 Flash + Pexels stock footage (original pipeline)
+PIPELINE_MODE = os.environ.get("PIPELINE_MODE", "hybrid")
+
 # ── Global API Keys ────────────────────────────────────────────────────────
 GEMINI_API_KEY       = os.environ.get("GEMINI_API_KEY", "")
 PEXELS_API_KEY       = os.environ.get("PEXELS_API_KEY", "")
 ELEVENLABS_API_KEY   = os.environ.get("ELEVENLABS_API_KEY", "")   # Primary voice
+
+# ── Anthropic (Claude 3.5 Sonnet — Hybrid pipeline brain) ─────────────────
+ANTHROPIC_API_KEY    = os.environ.get("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL         = "claude-3-5-sonnet-20240620"
+
+# ── Edge TTS (free fallback when ElevenLabs quota exhausted) ───────────────
+# No API key needed. Uses Microsoft's neural voices via edge-tts package.
+EDGE_TTS_VOICE       = "en-US-GuyNeural"   # Deep, serious, male documentary-style
+
+# ── Kling AI (AI video generation — Hybrid pipeline cinematographer) ───────
+KLING_API_KEY        = os.environ.get("KLING_API_KEY", "")
+KLING_API_BASE       = "https://api-singapore.klingai.com"
+KLING_MODEL          = "kling-v1"   # Standard tier, NOT Pro
+KLING_DURATION       = 5            # 5 seconds per clip
+KLING_ASPECT_RATIO   = "9:16"      # CRITICAL: portrait for YouTube Shorts
+KLING_POLL_INTERVAL  = 15           # seconds between status checks
+KLING_TIMEOUT        = 600          # 10 minutes max wait per clip
+KLING_CLIPS_COUNT    = 4            # exactly 4 clips per video
 
 # YouTube OAuth 2.0 (one set of creds controls all channels via channel switching)
 YOUTUBE_CLIENT_ID     = os.environ.get("YOUTUBE_CLIENT_ID", "")
@@ -73,6 +96,15 @@ CLIP_FADE_DURATION = 0.08  # barely-perceptible cut (no slow cinematic fades)
 HOOK_SFX_TYPE      = "boom_whoosh"  # jarring combo: heavy boom + whoosh
 HOOK_SFX_VOLUME    = 0.85           # loud enough to wake the viewer up
 SFX_VOLUME         = 0.65           # inline SFX mix level (under voice)
+
+# ── TTS Speedup (Hybrid pipeline retention fix) ───────────────────────────
+# 1.15x speedup makes narration sound fast and urgent — zero gaps of silence
+TTS_SPEEDUP        = 1.15
+
+# ── First Clip Trim (Hybrid pipeline retention fix) ───────────────────────
+# Kling AI videos often start with a frozen frame. Chop 0.5s off clip 1
+# to drop the viewer instantly into motion.
+FIRST_CLIP_TRIM_START = 0.5
 
 # ── ElevenLabs ─────────────────────────────────────────────────────────────
 # Model: eleven_turbo_v2_5 is fast + high-quality, perfect for automation

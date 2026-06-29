@@ -228,8 +228,7 @@ def _elevenlabs_generate(
         # Check for quota error FIRST — this must propagate up to stop production
         if _is_quota_error(exc):
             raise ElevenLabsQuotaError(
-                f"ElevenLabs quota exhausted: {exc}. "
-                "Stopping video production — no fallback TTS will be used."
+                f"ElevenLabs quota exhausted: {exc}"
             )
 
         # For non-quota errors: log and try the standard (non-aligned) endpoint
@@ -276,8 +275,7 @@ def _elevenlabs_standard(
     except Exception as exc:
         if _is_quota_error(exc):
             raise ElevenLabsQuotaError(
-                f"ElevenLabs quota exhausted: {exc}. "
-                "Stopping video production — no fallback TTS will be used."
+                f"ElevenLabs quota exhausted: {exc}"
             )
         raise ElevenLabsVoiceError(f"ElevenLabs standard endpoint failed: {exc}")
 
@@ -359,69 +357,256 @@ def _parse_alignment(alignment) -> list[dict]:
         log.warning(f"Alignment parsing failed ({exc}) — will use evenly-spaced fallback")
         return []
 
-    log.info(f"Parsed {len(word_timings)} word timestamps from alignment data")
-    return word_timings
+# ── Edge TTS Fallback (free, no API key) ──────────────────────────────────
+
+def _edge_tts_generate(text: str, audio_path: Path) -> list[dict]:
+    """
+    Generate voice via Microsoft Edge TTS (free, no API key needed).
+    Uses 'en-US-GuyNeural' — a deep, serious male voice perfect for
+    documentary/Dark Lore narration.
+
+    Used as fallback when ElevenLabs quota is exhausted.
+    Returns empty word_timings (Edge TTS doesn't provide word-level alignment).
+    """
+    import asyncio
+
+    try:
+        import edge_tts
+    except ImportError as exc:
+        raise RuntimeError(
+            f"edge-tts package not installed. Run: pip install edge-tts\n{exc}"
+        )
+
+    voice = config.EDGE_TTS_VOICE
+    log.info(f"Using Edge TTS fallback (voice: {voice})")
+
+    async def _generate():
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(str(audio_path))
+
+    # Bridge async edge-tts into our sync pipeline
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        # Already inside an event loop — create a new thread
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            pool.submit(asyncio.run, _generate()).result()
+    else:
+        asyncio.run(_generate())
+
+    log.info(f"Edge TTS: audio → {audio_path.name}")
+    return []   # No word timings; captions use evenly-spaced fallback
+
+
+# ── Audio speedup (1.15x retention fix) ────────────────────────────────────
+
+def _apply_speedup(
+    audio_path: Path,
+    speedup: float,
+    word_timings: list[dict],
+    run_dir: Path,
+) -> tuple[Path, list[dict], float]:
+    """
+    Apply a speedup factor to the audio file using FFmpeg atempo filter.
+    Also scales all word-level timestamps proportionally.
+
+    Returns (new_audio_path, scaled_timings, new_duration).
+    """
+    if speedup == 1.0:
+        duration = _get_audio_duration(audio_path)
+        return audio_path, word_timings, duration
+
+    log.info(f"Applying {speedup}x speedup to narration audio…")
+    sped_path = run_dir / "narration_sped.mp3"
+
+    # FFmpeg atempo filter supports 0.5 to 100.0
+    # Also trim leading/trailing silence with silenceremove
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-i", str(audio_path),
+            "-af", (
+                f"silenceremove=start_periods=1:start_silence=0.05:start_threshold=-50dB,"
+                f"areverse,silenceremove=start_periods=1:start_silence=0.05:start_threshold=-50dB,"
+                f"areverse,"
+                f"atempo={speedup}"
+            ),
+            str(sped_path),
+        ],
+        capture_output=True, text=True, check=True,
+    )
+
+    # Scale word timings
+    scaled_timings = []
+    for wt in word_timings:
+        scaled_timings.append({
+            "word": wt["word"],
+            "start_ms": int(wt["start_ms"] / speedup),
+            "end_ms": int(wt["end_ms"] / speedup),
+        })
+
+    new_duration = _get_audio_duration(sped_path)
+    log.info(
+        f"Speedup applied: {speedup}x | "
+        f"{_get_audio_duration(audio_path):.1f}s → {new_duration:.1f}s"
+    )
+
+    return sped_path, scaled_timings, new_duration
+
+
+# ── SRT generation (alongside ASS) ────────────────────────────────────────
+
+def _build_srt_from_words(
+    word_timings: list[dict],
+    words_per_cue: int = config.CAPTION_WORDS_PER_CUE,
+) -> str:
+    """
+    Build an SRT subtitle file from word-level timing data.
+    Matches the Hormozi style: 1-3 words per cue, ALL CAPS.
+    """
+    lines = []
+    cue_number = 1
+
+    for i in range(0, len(word_timings), words_per_cue):
+        group = word_timings[i : i + words_per_cue]
+        start_ms = group[0]["start_ms"]
+        end_ms = group[-1]["end_ms"]
+
+        if end_ms - start_ms < 100:
+            end_ms = start_ms + 100
+
+        text = " ".join(w["word"] for w in group).upper()
+
+        start_srt = _ms_to_srt_time(start_ms)
+        end_srt = _ms_to_srt_time(end_ms)
+
+        lines.append(f"{cue_number}")
+        lines.append(f"{start_srt} --> {end_srt}")
+        lines.append(text)
+        lines.append("")
+        cue_number += 1
+
+    return "\n".join(lines)
+
+
+def _build_simple_srt(narration: str, duration: float) -> str:
+    """Fallback: evenly-spaced SRT captions."""
+    words = narration.upper().split()
+    if not words:
+        return ""
+
+    ms_per_word = (duration * 1000) / len(words)
+    timings = [
+        {
+            "word": w,
+            "start_ms": int(i * ms_per_word),
+            "end_ms": int((i + 1) * ms_per_word),
+        }
+        for i, w in enumerate(words)
+    ]
+    return _build_srt_from_words(timings)
+
+
+def _ms_to_srt_time(ms: int) -> str:
+    """Convert milliseconds to SRT time format HH:MM:SS,mmm"""
+    total_seconds = ms // 1000
+    remaining_ms = ms % 1000
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{remaining_ms:03d}"
 
 
 # ── Public API ─────────────────────────────────────────────────────────────
 
 def generate_voiceover(narration: str, run_dir: Path) -> VoiceResult:
     """
-    Generate the narration audio and matching kinetic Hormozi-style ASS caption file.
+    Generate the narration audio and matching kinetic Hormozi-style caption files.
 
-    ONLY uses ElevenLabs. If quota is exhausted, raises ElevenLabsQuotaError
-    and production stops immediately — no fallback TTS.
+    Voice priority:
+      1. ElevenLabs (primary — per-niche voice IDs, word-level alignment)
+      2. Edge TTS (fallback — free, no API key, deep male documentary voice)
 
-    Raises:
-        ElevenLabsQuotaError: when ElevenLabs has no remaining quota
-        ElevenLabsVoiceError: for other ElevenLabs failures
-        RuntimeError: if ELEVENLABS_API_KEY is not set
+    Post-processing:
+      - 1.15x speedup via FFmpeg atempo (fast, urgent pacing)
+      - Silence trimming (no dead air at start/end)
+      - Generates both .ass AND .srt caption files
     """
     niche = config.get_niche()
     log.info(f"═══ Voice Engine: [{niche['display_name']}] synthesising narration ═══")
 
-    # Hard guard: no key = no production
-    if not config.ELEVENLABS_API_KEY:
-        raise ElevenLabsQuotaError(
-            "ELEVENLABS_API_KEY is not set. "
-            "Cannot produce video without ElevenLabs voice. "
-            "Set the secret and retry."
-        )
-
     audio_path = run_dir / "narration.mp3"
     ass_path   = run_dir / "captions.ass"
+    srt_path   = run_dir / "captions.srt"
     clean_text = _clean_text(narration)
+    engine_used = "elevenlabs"
+    word_timings: list[dict] = []
 
-    # Use 'or' so empty string from unset GitHub Secret also triggers the default
-    voice_id = niche.get("elevenlabs_voice_id") or "pNInz6obpgDQGcFmaJgB"
-    log.info(f"Using ElevenLabs voice: {voice_id}")
+    # ── Try ElevenLabs first ───────────────────────────────────────────────
+    if config.ELEVENLABS_API_KEY:
+        voice_id = niche.get("elevenlabs_voice_id") or "pNInz6obpgDQGcFmaJgB"
+        log.info(f"Using ElevenLabs voice: {voice_id}")
 
-    # This will raise ElevenLabsQuotaError if quota is hit — intentionally uncaught
-    word_timings = _elevenlabs_generate(clean_text, voice_id, audio_path)
+        try:
+            word_timings = _elevenlabs_generate(clean_text, voice_id, audio_path)
+            engine_used = "elevenlabs"
+        except ElevenLabsQuotaError as exc:
+            log.warning(f"ElevenLabs quota exhausted: {exc}")
+            log.info("Falling back to Edge TTS (free, no API key)…")
+            engine_used = None  # signal to try fallback
+        except ElevenLabsVoiceError as exc:
+            log.warning(f"ElevenLabs error: {exc}")
+            log.info("Falling back to Edge TTS (free, no API key)…")
+            engine_used = None
 
-    duration = _get_audio_duration(audio_path)
-    log.info(f"Audio duration: {duration:.1f}s")
+    # ── Fallback to Edge TTS (free, no API key) ────────────────────────────
+    if not engine_used:
+        try:
+            word_timings = _edge_tts_generate(clean_text, audio_path)
+            engine_used = "edge_tts"
+        except Exception as exc:
+            log.error(f"Edge TTS fallback also failed: {exc}")
+            raise ElevenLabsQuotaError(
+                f"Both ElevenLabs and Edge TTS failed. "
+                f"ElevenLabs: quota exhausted. Edge TTS: {exc}. "
+                f"Cannot produce video without voice."
+            )
 
-    # ── Build Hormozi kinetic captions ──────────────────────────────────────
+    # ── Apply 1.15x speedup (retention fix) ────────────────────────────────
+    audio_path, word_timings, duration = _apply_speedup(
+        audio_path, config.TTS_SPEEDUP, word_timings, run_dir,
+    )
+    log.info(f"Final audio duration (after speedup): {duration:.1f}s")
+
+    # ── Build Hormozi kinetic captions (ASS + SRT) ─────────────────────────
     if word_timings:
         log.info(f"Building aligned captions from {len(word_timings)} word timestamps")
         ass_content = _build_ass_from_words(word_timings)
+        srt_content = _build_srt_from_words(word_timings)
     else:
         log.warning("No word timing data — using evenly-spaced caption fallback")
         ass_content = _build_simple_ass(clean_text, duration)
+        srt_content = _build_simple_srt(clean_text, duration)
 
     ass_path.write_text(ass_content, encoding="utf-8")
+    srt_path.write_text(srt_content, encoding="utf-8")
 
     log.info(
-        f"Voice done | engine=elevenlabs | "
+        f"Voice done | engine={engine_used} | "
+        f"speedup={config.TTS_SPEEDUP}x | "
         f"duration={duration:.1f}s | "
         f"word_timestamps={len(word_timings)} | "
-        f"captions={ass_path.name}"
+        f"captions={ass_path.name} + {srt_path.name}"
     )
 
     return VoiceResult(
         audio_file=audio_path,
         ass_file=ass_path,
         duration=duration,
-        engine="elevenlabs",
+        engine=engine_used,
     )
+
