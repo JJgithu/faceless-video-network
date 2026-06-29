@@ -289,8 +289,20 @@ Generate the JSON now."""
     if len(youtube_title) > 100:
         youtube_title = youtube_title[:97] + "…"
 
-    # Extract hook (first sentence)
-    hook = spoken_script.split(".")[0].strip() + "." if spoken_script else ""
+    # Extract hook (first real sentence — must be ≥ 5 chars to be valid)
+    hook = ""
+    if spoken_script:
+        # Try splitting on sentence-ending punctuation
+        import re as _re
+        sentences = [s.strip() for s in _re.split(r'[.!?]', spoken_script) if s.strip()]
+        for candidate in sentences:
+            if len(candidate) >= 5:
+                hook = candidate + "."
+                break
+        # Final fallback: use first 80 chars of the narration
+        if not hook or len(hook) < 6:
+            hook = spoken_script[:80].strip() + "…"
+            log.warning(f"Hook extraction failed — using narration excerpt: {hook}")
 
     # ── Build hashtags ──────────────────────────────────────────────────────
     hashtags = [
