@@ -108,8 +108,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     for i in range(0, len(word_timings), words_per_cue):
         group = word_timings[i : i + words_per_cue]
-        start_ms = group[0]["start_ms"]
-        end_ms   = group[-1]["end_ms"]
+        start_ms = max(0, group[0]["start_ms"] + config.CAPTION_OFFSET_MS)
+        end_ms   = max(start_ms + 50, group[-1]["end_ms"] + config.CAPTION_OFFSET_MS)
 
         # Ensure minimum cue duration (100ms) to avoid invisible flashes
         if end_ms - start_ms < 100:
@@ -473,8 +473,8 @@ def _build_srt_from_words(
 
     for i in range(0, len(word_timings), words_per_cue):
         group = word_timings[i : i + words_per_cue]
-        start_ms = group[0]["start_ms"]
-        end_ms = group[-1]["end_ms"]
+        start_ms = max(0, group[0]["start_ms"] + config.CAPTION_OFFSET_MS)
+        end_ms = max(start_ms + 50, group[-1]["end_ms"] + config.CAPTION_OFFSET_MS)
 
         if end_ms - start_ms < 100:
             end_ms = start_ms + 100

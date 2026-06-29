@@ -124,6 +124,7 @@ CAPTION_MARGIN_BOTTOM   = 0      # not used — captions are center-screen (Alig
 CAPTION_PRIMARY_COLOR   = "&H0000FFFF"   # bright yellow (ASS BGR format)
 CAPTION_OUTLINE_COLOR   = "&H00000000"   # black outline
 CAPTION_BACK_COLOR      = "&HAA000000"   # semi-transparent dark shadow box
+CAPTION_OFFSET_MS       = -500   # shift captions earlier (negative = sooner, fixes audio lag)
 
 # ── Asset settings ──────────────────────────────────────────────────────────
 PEXELS_CLIPS_TARGET     = 10   # more clips = more variety for fast cutting
