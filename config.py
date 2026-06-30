@@ -81,11 +81,11 @@ GEMINI_MODEL = "gemini-2.5-flash"
 VIDEO_WIDTH        = 1080
 VIDEO_HEIGHT       = 1920
 VIDEO_FPS          = 30
-MAX_VIDEO_DURATION = 30    # seconds — short, punchy Shorts
-MIN_VIDEO_DURATION = 15
+MAX_VIDEO_DURATION = 20    # seconds — ultra-short punchy Shorts
+MIN_VIDEO_DURATION = 10
 INTRO_DURATION     = 0.0   # NO intro card — video starts instantly in action
-OUTRO_DURATION     = 3.0   # CTA card
-MUSIC_VOLUME       = 0.10  # background music mix level
+OUTRO_DURATION     = 2.0   # CTA card
+MUSIC_VOLUME       = 0.0   # background music OFF — voice only
 
 # ── Visual pacing ──────────────────────────────────────────────────────────
 # Visuals MUST change every 2–3 seconds to maintain constant dopamine
@@ -94,8 +94,8 @@ CLIP_FADE_DURATION = 0.08  # barely-perceptible cut (no slow cinematic fades)
 
 # ── Hook SFX (frame 1 pattern interrupt) ───────────────────────────────────
 HOOK_SFX_TYPE      = "boom_whoosh"  # jarring combo: heavy boom + whoosh
-HOOK_SFX_VOLUME    = 0.85           # loud enough to wake the viewer up
-SFX_VOLUME         = 0.65           # inline SFX mix level (under voice)
+HOOK_SFX_VOLUME    = 0.0            # hook SFX OFF — clean voice only
+SFX_VOLUME         = 0.0            # inline SFX OFF — clean voice only
 
 # ── TTS Speedup (Hybrid pipeline retention fix) ───────────────────────────
 # 1.0 = natural speed (no acceleration)
