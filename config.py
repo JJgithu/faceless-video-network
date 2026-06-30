@@ -81,15 +81,15 @@ GEMINI_MODEL = "gemini-2.5-flash"
 VIDEO_WIDTH        = 1080
 VIDEO_HEIGHT       = 1920
 VIDEO_FPS          = 30
-MAX_VIDEO_DURATION = 25    # 4 Kling clips × 5s = 20s footage + 3s outro
+MAX_VIDEO_DURATION = 30    # seconds — short, punchy Shorts
 MIN_VIDEO_DURATION = 15
 INTRO_DURATION     = 0.0   # NO intro card — video starts instantly in action
 OUTRO_DURATION     = 3.0   # CTA card
 MUSIC_VOLUME       = 0.10  # background music mix level
 
 # ── Visual pacing ──────────────────────────────────────────────────────────
-# Each Kling AI clip is 5s — use it fully, no chopping
-CLIP_MAX_DURATION  = 5.0   # match Kling clip duration (no repetition)
+# Visuals MUST change every 2–3 seconds to maintain constant dopamine
+CLIP_MAX_DURATION  = 2.5   # max seconds per clip before cutting to next
 CLIP_FADE_DURATION = 0.08  # barely-perceptible cut (no slow cinematic fades)
 
 # ── Hook SFX (frame 1 pattern interrupt) ───────────────────────────────────

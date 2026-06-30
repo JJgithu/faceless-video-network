@@ -1,16 +1,15 @@
 name: 🎬 Faceless Video Pipeline
 
 on:
-  # TWO videos per day — morning + evening runs
+  # ONE video per day — morning run only
   schedule:
-    - cron: '0 13 * * *'   # 9am ET — Morning run (active)
-    - cron: '0 1  * * *'   # 9pm ET — Evening run (active)
+    - cron: '0 13 * * *'   # 9am ET — Morning run
 
   # External trigger (cron-job.org backup in case GitHub scheduler skips)
   # POST https://api.github.com/repos/JJgithu/faceless-video-network/dispatches
-  # Body: {"event_type": "morning_batch"} or {"event_type": "evening_batch"}
+  # Body: {"event_type": "morning_batch"}
   repository_dispatch:
-    types: [morning_batch, evening_batch]
+    types: [morning_batch]
 
   # Manual trigger — pick one niche or run the full rotation
   workflow_dispatch:
@@ -143,27 +142,16 @@ jobs:
           fi
 
           # ── Determine which niche to run ───────────────────────────────────
-          # 4 active niches rotate across the week — 2 videos per day
-          # Morning run uses one niche, evening run uses the next
+          # 4 niches rotate daily — 1 video per day
           MANUAL_NICHE="${{ github.event.inputs.niche }}"
 
           # 4 active niches in rotation order
           ALL_NICHES=(historical_mysteries deep_sea body_science alternate_history)
           N=${#ALL_NICHES[@]}  # 4
 
-          # Day-of-year based offset + time-of-day offset
+          # Day-of-year based rotation (1 niche per day)
           DAY=$(( $(date -u +%j) - 1 ))   # 0-365
-          HOUR=$(date -u +%H)             # 0-23
-
-          # Morning run (cron 13 UTC = 9am ET) → slot 0
-          # Evening run (cron 01 UTC = 9pm ET) → slot 1
-          if [ "$HOUR" -ge 6 ] && [ "$HOUR" -le 18 ]; then
-            SLOT=0  # morning
-          else
-            SLOT=1  # evening
-          fi
-
-          NICHE_INDEX=$(( (DAY * 2 + SLOT) % N ))
+          NICHE_INDEX=$(( DAY % N ))
           AUTO_NICHE=${ALL_NICHES[$NICHE_INDEX]}
 
           if [ "$MANUAL_NICHE" != "" ] && [ "$MANUAL_NICHE" != "auto_batch" ]; then
@@ -176,7 +164,6 @@ jobs:
           echo "════════════════════════════════════════════════════════"
           echo "► Pipeline: ${PIPELINE_MODE:-hybrid}"
           echo "► Niche: $NICHE"
-          echo "► Slot: $([ $SLOT -eq 0 ] && echo 'MORNING' || echo 'EVENING')"
           echo "════════════════════════════════════════════════════════"
           NICHE=$NICHE python main.py $DRY_FLAG
 
