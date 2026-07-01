@@ -1,15 +1,18 @@
 name: 🎬 Faceless Video Pipeline
 
 on:
-  # ONE video per day — morning run only
-  schedule:
-    - cron: '0 13 * * *'   # 9am ET — Morning run
-
-  # External trigger (cron-job.org backup in case GitHub scheduler skips)
-  # POST https://api.github.com/repos/JJgithu/faceless-video-network/dispatches
-  # Body: {"event_type": "morning_batch"}
-  repository_dispatch:
-    types: [morning_batch]
+  # ⏸️ PROJECT DEACTIVATED — automatic video generation is turned off.
+  # Re-enable by uncommenting the `schedule` and `repository_dispatch` blocks below.
+  #
+  # # ONE video per day — morning run only
+  # schedule:
+  #   - cron: '0 13 * * *'   # 9am ET — Morning run
+  #
+  # # External trigger (cron-job.org backup in case GitHub scheduler skips)
+  # # POST https://api.github.com/repos/JJgithu/faceless-video-network/dispatches
+  # # Body: {"event_type": "morning_batch"}
+  # repository_dispatch:
+  #   types: [morning_batch]
 
   # Manual trigger — pick one niche or run the full rotation
   workflow_dispatch:
